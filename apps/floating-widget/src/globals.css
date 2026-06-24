@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  /* Transparent so the frameless Electron window shows the desktop behind it. */
+  background: transparent;
+}
+
+#root {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
+/* Lightweight markdown styling for the Call Intelligence panel. */
+.prose-copilot h2 {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #38bdf8;
+  margin: 0.7rem 0 0.3rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(56, 189, 248, 0.6);
+}
+.prose-copilot h2:first-child {
+  margin-top: 0;
+}
+.prose-copilot ul {
+  list-style: none;
+  padding-left: 0.35rem;
+  margin: 0.15rem 0;
+}
+.prose-copilot li {
+  position: relative;
+  padding-left: 0.9rem;
+  margin: 0.2rem 0;
+  line-height: 1.35;
+  color: #e2e8f0;
+}
+.prose-copilot li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: #64748b;
+}
+.prose-copilot p {
+  margin: 0.25rem 0;
+}
+.prose-copilot strong {
+  color: #f0f9ff;
+  font-weight: 600;
+}
+
+/* Wolf Tactic markdown: make the spoken line pop. */
+.tactic-md p {
+  margin: 0;
+}
+.tactic-md p + p {
+  margin-top: 0.25rem;
+}
+.tactic-md strong {
+  color: #fff7ed;
+  font-weight: 700;
+}

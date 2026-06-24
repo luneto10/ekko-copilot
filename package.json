@@ -1,0 +1,22 @@
+{
+  "name": "workiq-sales-copilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WorkIQ Sales Copilot — always-on-top floating desktop assistant for live Teams sales calls.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n widget,electron -c cyan,magenta \"npm run dev:widget\" \"npm run dev:electron\"",
+    "dev:widget": "npm run dev -w @workiq/floating-widget",
+    "dev:electron": "wait-on tcp:127.0.0.1:5173 && npm run dev -w @workiq/desktop-client",
+    "build": "npm run build -w @workiq/floating-widget && npm run build -w @workiq/desktop-client",
+    "typecheck": "npm run typecheck -w @workiq/floating-widget && npm run typecheck -w @workiq/desktop-client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3",
+    "wait-on": "^8.0.1"
+  }
+}

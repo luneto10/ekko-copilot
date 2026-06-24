@@ -1,0 +1,24 @@
+{
+  "name": "@workiq/desktop-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron main process: native floating layout, audio loopback bridge, Azure Speech, orchestration.",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsup && electron .",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "microsoft-cognitiveservices-speech-sdk": "^1.41.0",
+    "openai": "^4.67.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.5",
+    "@workiq/types": "*",
+    "electron": "^33.2.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  }
+}
