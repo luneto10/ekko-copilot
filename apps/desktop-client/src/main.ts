@@ -10,6 +10,9 @@ const DEV_URL = 'http://127.0.0.1:5173';
 /** Full-window dimensions, restored when expanding from the collapsed dock. */
 const EXPANDED_MIN_WIDTH = 360;
 const EXPANDED_MIN_HEIGHT = 420;
+/** Default window size, used by the dev "reset size" action. */
+const DEFAULT_WIDTH = 440;
+const DEFAULT_HEIGHT = 680;
 /** Size of the small right-edge dock shown while collapsed. */
 const COLLAPSED_WIDTH = 96;
 const COLLAPSED_HEIGHT = 96;
@@ -162,12 +165,29 @@ function moveDock(dy: number): void {
   widgetWindow.setBounds({ x, y, width: bounds.width, height: bounds.height });
 }
 
+/**
+ * Dev escape hatch: force the window back to its default size and re-center it
+ * on the current display, clearing any saved collapse bounds.
+ */
+function resetWindow(): void {
+  if (!widgetWindow) return;
+  expandedBounds = null;
+  widgetWindow.setMinimumSize(EXPANDED_MIN_WIDTH, EXPANDED_MIN_HEIGHT);
+  widgetWindow.setResizable(true);
+  const { workArea } = screen.getDisplayMatching(widgetWindow.getBounds());
+  const x = Math.round(workArea.x + (workArea.width - DEFAULT_WIDTH) / 2);
+  const y = Math.round(workArea.y + (workArea.height - DEFAULT_HEIGHT) / 2);
+  widgetWindow.setBounds({ x, y, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+}
+
 function registerIpc(): void {
   ipcMain.on(IPC.AudioStart, () => {
     debug.event('audio', 'capture started');
+    orchestrator?.setActive(true);
   });
   ipcMain.on(IPC.AudioStop, () => {
     debug.event('audio', 'capture stopped');
+    orchestrator?.setActive(false);
   });
   ipcMain.on(IPC.AudioChunk, (_event, payload: AudioChunkPayload) => {
     const buffer = toArrayBuffer(payload.buffer);
@@ -179,6 +199,7 @@ function registerIpc(): void {
   ipcMain.on(IPC.WindowCollapse, () => collapseWidget());
   ipcMain.on(IPC.WindowExpand, () => expandWidget());
   ipcMain.on(IPC.WindowDockMove, (_event, dy: number) => moveDock(dy));
+  ipcMain.on(IPC.WindowReset, () => resetWindow());
 
   ipcMain.on(IPC.DebugTestTranscript, (_event, payload: TestTranscriptPayload) => {
     orchestrator?.injectTranscript(payload.speaker, payload.text);

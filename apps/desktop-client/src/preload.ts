@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('workiq', {
   collapseWindow: () => ipcRenderer.send(IPC.WindowCollapse),
   expandWindow: () => ipcRenderer.send(IPC.WindowExpand),
   moveDock: (dy: number) => ipcRenderer.send(IPC.WindowDockMove, dy),
+  resetWindow: () => ipcRenderer.send(IPC.WindowReset),
 
   onTranscript: (cb: (segment: TranscriptSegment) => void) =>
     subscribe(IPC.TranscriptSegment, cb),

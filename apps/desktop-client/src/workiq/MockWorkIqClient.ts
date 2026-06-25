@@ -1,5 +1,6 @@
 import type { WorkIqResponse, WorkIqSource } from '@workiq/types';
 import type { SalesIntent } from '../orchestrator/IntentDetector';
+import { IntentDetector } from '../orchestrator/IntentDetector';
 import type { WorkIqClient } from './WorkIqClient';
 
 interface CannedAnswer {
@@ -70,12 +71,36 @@ const CANNED: Record<SalesIntent, CannedAnswer> = {
   },
 };
 
+/** Generic grounding for free-form topics the canned set doesn't cover. */
+const GENERIC_SOURCES: WorkIqSource[] = [
+  { title: 'Account Notes — Contoso.docx', url: 'https://contoso.sharepoint.com/sites/sales/notes', kind: 'sharepoint' },
+  { title: 'Re: Follow-up from discovery call', url: 'https://outlook.office.com/mail/discovery', kind: 'email' },
+];
+
 /** Simulated Work IQ grounding with realistic enterprise latency (1.5–3s). */
 export class MockWorkIqClient implements WorkIqClient {
-  async query(text: string, intent: SalesIntent): Promise<WorkIqResponse> {
+  /** Maps a free-form AI topic (or the raw query) onto a canned intent, if any. */
+  private readonly detector = new IntentDetector();
+
+  async query(text: string, topic: string): Promise<WorkIqResponse> {
     const latency = 1500 + Math.random() * 1500;
     await new Promise((resolve) => setTimeout(resolve, latency));
-    const canned = CANNED[intent];
-    return { query: text, answer: canned.answer, sources: canned.sources };
+
+    const intent = this.detector.detect(`${topic} ${text}`);
+    if (intent) {
+      const canned = CANNED[intent];
+      return { query: text, answer: canned.answer, sources: canned.sources, topic };
+    }
+
+    // Novel topic the AI named that we have no canned answer for — still ground
+    // it plausibly so the demo flows for any conversation.
+    return {
+      query: text,
+      answer:
+        `Here's what I found on ${topic}: our materials cover this and I've pulled the most ` +
+        `relevant files. Confirm the specifics below before you answer the customer.`,
+      sources: GENERIC_SOURCES,
+      topic,
+    };
   }
 }

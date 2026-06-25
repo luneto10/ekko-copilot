@@ -1,11 +1,15 @@
 import type { WorkIqResponse } from '@workiq/types';
-import type { SalesIntent } from '../orchestrator/IntentDetector';
 import { env } from '../env';
 import { RestWorkIqClient } from './RestWorkIqClient';
 import { MockWorkIqClient } from './MockWorkIqClient';
 
 export interface WorkIqClient {
-  query(text: string, intent: SalesIntent): Promise<WorkIqResponse>;
+  /**
+   * Ground a question against the user's knowledge.
+   * @param text  the query to look up
+   * @param topic free-form topic label (decided by the AI key-point detector)
+   */
+  query(text: string, topic: string): Promise<WorkIqResponse>;
 }
 
 /**

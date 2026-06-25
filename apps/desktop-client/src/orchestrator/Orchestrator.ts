@@ -9,7 +9,7 @@ import { SourceRecognizer } from '../speech/SourceRecognizer';
 import { isSpeechConfigured, env } from '../env';
 import { RollingBuffer } from './RollingBuffer';
 import { MemoryCompiler } from './MemoryCompiler';
-import { IntentDetector, type SalesIntent } from './IntentDetector';
+import { createKeyPointDetector, type KeyPointDetector, type DetectedKeyPoint } from './KeyPointDetector';
 import { INITIAL_MEMORY } from './prompts';
 import { createWorkIqClient, type WorkIqClient } from '../workiq/WorkIqClient';
 import { debug } from '../debug/DebugBus';
@@ -33,12 +33,14 @@ export class Orchestrator {
   private readonly emit: Emit;
   private readonly buffer = new RollingBuffer();
   private readonly memoryCompiler = new MemoryCompiler();
-  private readonly intentDetector = new IntentDetector();
+  private readonly keyPointDetector: KeyPointDetector = createKeyPointDetector();
   private readonly workIq: WorkIqClient;
 
   private micRecognizer: SourceRecognizer | null = null;
   private systemRecognizer: SourceRecognizer | null = null;
   private tacticTimer: NodeJS.Timeout | null = null;
+  /** Whether the rep is actively listening; gates real-time tactic nudges. */
+  private active = false;
 
   private memoryMarkdown = INITIAL_MEMORY;
   private history: TranscriptSegment[] = [];
@@ -70,6 +72,15 @@ export class Orchestrator {
     this.systemRecognizer?.close();
   }
 
+  /**
+   * Mark the rep as listening (or not). While inactive, the orchestrator stops
+   * pushing new Wolf Tactics so they don't keep popping after the call ends.
+   */
+  setActive(active: boolean): void {
+    this.active = active;
+    debug.gauge('orchestrator.active', active);
+  }
+
   /** Feed PCM from the renderer's audio capture into the right recognizer. */
   pushAudio(source: AudioSource, buffer: ArrayBuffer): void {
     if (source === 'mic') this.micRecognizer?.write(buffer);
@@ -91,14 +102,10 @@ export class Orchestrator {
     debug.gauge('buffer.words', this.buffer.wordCount());
     debug.event('transcript', `${segment.speakerLabel}: ${segment.text}`, { speaker: segment.speaker });
 
-    // COLD path: only trigger on a customer question to avoid noise from the rep.
+    // COLD path: only trigger on a customer line; the AI decides if it's a
+    // groundable key point (no predefined intents).
     if (segment.speaker === 'Speaker_2') {
-      const intent = this.intentDetector.detect(segment.text);
-      if (intent) {
-        debug.count('intents');
-        debug.event('intent', `Detected '${intent}'`, { intent, text: segment.text });
-        void this.runWorkIq(intent, segment.text);
-      }
+      void this.detectKeyPoint(segment.text);
     }
 
     // Memory loop: flush at a natural pause (final segment) past the word threshold.
@@ -125,25 +132,49 @@ export class Orchestrator {
     }
   }
 
-  private async runWorkIq(intent: SalesIntent, query: string): Promise<void> {
-    this.emit(IPC.WorkIqStatus, { query, isSearching: true });
+  private async runWorkIq(topic: string, query: string): Promise<void> {
+    this.emit(IPC.WorkIqStatus, { query, isSearching: true, topic });
     debug.count('workiq.calls');
-    debug.event('workiq', `query → "${query}"`, { intent });
+    debug.event('workiq', `query → "${query}"`, { topic });
     const started = Date.now();
     try {
-      const result = await this.workIq.query(query, intent);
+      const result = await this.workIq.query(query, topic);
       const ms = Date.now() - started;
       debug.gauge('workiq.lastMs', ms);
       debug.event('workiq', `result in ${ms}ms`, { answer: result.answer, sources: result.sources });
-      this.emit(IPC.WorkIqResult, result);
+      this.emit(IPC.WorkIqResult, { ...result, topic });
     } catch (err) {
       debug.error('workiq', 'query failed', { error: String(err) });
     } finally {
-      this.emit(IPC.WorkIqStatus, { query, isSearching: false });
+      this.emit(IPC.WorkIqStatus, { query, isSearching: false, topic });
     }
   }
 
-  private async generateTactic(): Promise<void> {
+  /**
+   * COLD path: ask the key-point detector whether this customer line is worth
+   * grounding, then run Work IQ on the topic it named. Never awaited on the hot
+   * path, so transcription stays real-time.
+   */
+  private async detectKeyPoint(utterance: string): Promise<void> {
+    const context = this.history
+      .slice(-6)
+      .map((s) => `${s.speakerLabel}: ${s.text}`)
+      .join('\n');
+    let point: DetectedKeyPoint | null;
+    try {
+      point = await this.keyPointDetector.detect(utterance, context);
+    } catch (err) {
+      debug.error('intent', 'key-point detection failed', { error: String(err) });
+      return;
+    }
+    if (!point) return;
+    debug.count('intents');
+    debug.event('intent', `Key point: ${point.topic}`, { topic: point.topic, query: point.query });
+    void this.runWorkIq(point.topic, point.query);
+  }
+
+  private async generateTactic(force = false): Promise<void> {
+    if (!force && !this.active) return;
     if (this.history.length === 0) return;
     const recent = this.history
       .slice(-8)
@@ -188,6 +219,6 @@ export class Orchestrator {
   /** Dev Inspector: generate a sales tactic immediately. */
   forceTactic(): void {
     debug.event('tactic', 'force generate (manual)');
-    void this.generateTactic();
+    void this.generateTactic(true);
   }
 }

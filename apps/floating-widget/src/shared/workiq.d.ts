@@ -44,6 +44,8 @@ declare global {
       expandWindow(): void;
       /** Move the collapsed dock vertically by `dy` pixels (x stays pinned). */
       moveDock(dy: number): void;
+      /** Dev: force the window back to its default size and re-center it. */
+      resetWindow(): void;
 
       // --- main -> renderer event streams (each returns an unsubscribe fn) ---
       onTranscript(cb: (segment: TranscriptSegment) => void): () => void;

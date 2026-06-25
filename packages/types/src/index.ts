@@ -33,12 +33,16 @@ export interface WorkIqResponse {
   query: string;
   answer: string;
   sources: WorkIqSource[];
+  /** High-level topic/intent label, used to title the conversation key note. */
+  topic?: string;
 }
 
 /** Loading-state ping for the Work IQ cold path. */
 export interface WorkIqStatus {
   query: string;
   isSearching: boolean;
+  /** High-level topic/intent label for the key note being searched. */
+  topic?: string;
 }
 
 export type TacticKind = 'tactic' | 'objection' | 'info';
@@ -103,6 +107,7 @@ export const IPC = {
   WindowCollapse: 'window:collapse',
   WindowExpand: 'window:expand',
   WindowDockMove: 'window:dock-move',
+  WindowReset: 'window:reset',
   // main -> renderer
   TranscriptSegment: 'transcript:segment',
   MemoryUpdate: 'memory:update',

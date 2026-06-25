@@ -1,6 +1,5 @@
 import type { PanelDefinition } from './types';
-import { transcriptPanel } from '@/features/transcript';
-import { memoryPanel } from '@/features/memory';
+import { conversationPanel } from '@/features/keynotes';
 import { copilotPanel } from '@/features/copilot';
 
 /**
@@ -13,10 +12,15 @@ import { copilotPanel } from '@/features/copilot';
  *   • **reorder** the UI  → reorder this array.
  *
  * Nothing in `App.tsx` needs to change — it simply maps over this list.
+ *
+ * NOTE: the old Live Feed (transcript) and Call Intelligence (memory.md) panels
+ * are no longer shown. The transcript + memory pipelines still run inside the
+ * main process to ground key notes and tactics — that "call intelligence" is
+ * now internal context rather than its own panel.
+ *
  * See `docs/FEATURE_GUIDE.md` for the full step-by-step.
  */
 export const PANELS: PanelDefinition[] = [
-  transcriptPanel, // Live Feed — running dialogue by speaker
-  memoryPanel, // Call Intelligence — rolling memory.md
-  copilotPanel, // Copilot · Work IQ — grounded answers + Wolf Tactic
+  conversationPanel, // Key-note pills + per-note chatbot (grounded by Work IQ)
+  copilotPanel, // Wolf Tactic — real-time coaching nudge
 ];

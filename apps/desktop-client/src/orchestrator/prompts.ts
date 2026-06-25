@@ -29,3 +29,17 @@ Paragraph 1: a 2-5 word label of the situation (e.g. "Contract-term objection").
 Paragraph 2: Say: **"<the exact words the rep should say, <= 18 words>"**
 
 Be specific to THIS conversation. No preamble, no explanation, do not output the words "WOLF TACTIC".`;
+
+export const KEYPOINT_SYSTEM = `You detect KEY POINTS in a live B2B sales call that the rep should ground against company knowledge (Work IQ).
+You are given recent call CONTEXT and the LATEST customer line.
+
+Decide whether the latest line raises a substantive, groundable key point — a question, concern, objection, requirement, or buying signal worth looking up. Greetings, small talk, acknowledgements, and rep chatter are NOT key points.
+
+Return ONLY a JSON object, no prose:
+{"isKeyPoint": boolean, "topic": string, "query": string}
+- "isKeyPoint": true only when grounding would genuinely help the rep right now.
+- "topic": the SPECIFIC thing the customer named, using THEIR exact term — never a broad category. If they say "SOC 2", topic is "SOC 2" (NOT "Security"). If they say "GDPR", topic is "GDPR" (NOT "Compliance"). If they say "per-seat pricing", topic is "Per-Seat Pricing". Use the literal term/acronym as spoken (<= 4 words). Do NOT generalize and do NOT pick from a fixed list.
+- "query": a concise search query (<= 12 words) capturing exactly what to look up.
+
+When isKeyPoint is false, still return valid JSON with empty topic and query.`;
+

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAudioCapture } from '@/features/capture/useAudioCapture';
 import { AppearanceMenu } from '@/shared/ui/AppearanceMenu';
@@ -54,6 +54,33 @@ export default function App() {
       setDocked(true);
     }
   };
+
+  // Dev escape hatch: snap the renderer back to expanded and force the window
+  // to its default size, in case a resize gets stuck.
+  const resetSize = () => {
+    setDocked(false);
+    setCollapsed(false);
+    bridge.resetWindow();
+  };
+
+  // Dev shortcuts:
+  //   Ctrl/Cmd+M  toggle collapsed/expanded
+  //   Ctrl/Cmd+0  reset the window to its default size (escape hatch)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        if (collapsed) expand();
+        else collapse();
+      } else if (e.key === '0') {
+        e.preventDefault();
+        resetSize();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [collapsed]);
 
   return (
     <div className={`relative h-screen w-screen overflow-hidden ${rootClass}`}>

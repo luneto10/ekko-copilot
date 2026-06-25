@@ -1,29 +1,16 @@
 import { useEffect, useState } from 'react';
-import type { CopilotTactic, WorkIqResponse } from '@workiq/types';
+import type { CopilotTactic } from '@workiq/types';
 import { bridge } from '@/shared/bridge';
 
 /**
- * Owns the Copilot panel's state: the async Work IQ lookup (loading query +
- * grounded result) and the latest Wolf Tactic. Subscribes to three channels and
- * tears all of them down on unmount.
+ * Owns the latest Wolf Tactic — the real-time coaching nudge. The main process
+ * only emits new tactics while the rep is actively listening, so this stops
+ * updating once the call ends.
  */
 export function useCopilot() {
-  /** The query currently being searched, or `null` when idle. */
-  const [searching, setSearching] = useState<string | null>(null);
-  const [workIq, setWorkIq] = useState<WorkIqResponse | null>(null);
   const [tactic, setTactic] = useState<CopilotTactic | null>(null);
 
-  useEffect(() => {
-    const unsubscribers = [
-      bridge.onWorkIqStatus((status) => setSearching(status.isSearching ? status.query : null)),
-      bridge.onWorkIqResult((result) => {
-        setWorkIq(result);
-        setSearching(null);
-      }),
-      bridge.onTactic((next) => setTactic(next)),
-    ];
-    return () => unsubscribers.forEach((off) => off());
-  }, []);
+  useEffect(() => bridge.onTactic((next) => setTactic(next)), []);
 
-  return { searching, workIq, tactic };
+  return { tactic };
 }
