@@ -33,7 +33,7 @@ export function CopilotRecommendations() {
       )}
 
       <div
-        className={`rounded-2xl border border-sky-400/30 bg-slate-900/70 px-4 py-3 backdrop-blur-xl ${
+        className={`glass-surface rounded-2xl border border-sky-400/30 px-4 py-3 ${
           searching ? 'animate-pulse-glow' : ''
         }`}
       >

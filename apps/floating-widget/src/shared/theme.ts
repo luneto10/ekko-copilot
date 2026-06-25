@@ -28,6 +28,11 @@ export const SOURCE_ICON: Record<WorkIqSourceKind, string> = {
   document: '📄',
 };
 
-/** Shared translucent "glass" surface classes so panels look consistent. */
-export const GLASS_SURFACE =
-  'rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl';
+/**
+ * Shared "glass" surface classes so panels look consistent.
+ *
+ * Background colour comes from the `--surface-bg` CSS variable (see
+ * `globals.css`), which the header's solid/transparent toggle flips for the
+ * whole widget at once.
+ */
+export const GLASS_SURFACE = 'glass-surface rounded-2xl border border-white/10';

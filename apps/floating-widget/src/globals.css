@@ -16,6 +16,87 @@ body,
   overflow: hidden;
 }
 
+/*
+ * Appearance system — two independent axes set on the root element:
+ *   theme:   .theme-dark  | .theme-light   (text + surface colour palette)
+ *   surface: .surface-transparent | .surface-solid  (see-through vs opaque)
+ *
+ * Panels read `--surface-bg` through the `.glass-surface` utility, so changing
+ * either axis on the root re-skins every panel at once. The Appearance popup
+ * (header) flips these classes.
+ */
+.theme-dark.surface-transparent {
+  --surface-bg: rgba(15, 23, 42, 0.72);
+}
+.theme-dark.surface-solid {
+  --surface-bg: rgb(15, 23, 42);
+}
+.theme-light.surface-transparent {
+  --surface-bg: rgba(248, 250, 252, 0.82);
+}
+.theme-light.surface-solid {
+  --surface-bg: rgb(248, 250, 252);
+}
+
+.glass-surface {
+  background-color: var(--surface-bg, rgba(15, 23, 42, 0.72));
+}
+.surface-transparent .glass-surface {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/*
+ * Light-theme text/border overrides. These selectors are more specific than
+ * the bare Tailwind utilities (two classes vs one), so they win without
+ * touching component markup. Dark theme keeps Tailwind's defaults.
+ */
+.theme-light {
+  color: #0f172a;
+}
+.theme-light .text-slate-100 {
+  color: #0f172a;
+}
+.theme-light .text-slate-200 {
+  color: #1e293b;
+}
+.theme-light .text-slate-300 {
+  color: #334155;
+}
+.theme-light .text-slate-400 {
+  color: #475569;
+}
+.theme-light .text-slate-500 {
+  color: #64748b;
+}
+.theme-light .text-sky-200 {
+  color: #075985;
+}
+.theme-light .text-sky-300 {
+  color: #0369a1;
+}
+.theme-light .text-amber-100 {
+  color: #92400e;
+}
+.theme-light .text-amber-300 {
+  color: #b45309;
+}
+.theme-light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+.theme-light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+.theme-light .prose-copilot li {
+  color: #334155;
+}
+.theme-light .prose-copilot strong {
+  color: #0f172a;
+}
+.theme-light .tactic-md strong {
+  color: #7c2d12;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }

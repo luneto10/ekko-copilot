@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useAudioCapture } from '@/features/capture/useAudioCapture';
+import { AppearanceMenu } from '@/shared/ui/AppearanceMenu';
+import { useAppearance } from '@/shared/useAppearance';
 import { PANELS } from '@/panels/registry';
 
 /** Electron frameless-window drag regions (see bridge.d.ts CSSProperties aug). */
@@ -16,12 +18,13 @@ const NO_DRAG: CSSProperties = { WebkitAppRegion: 'no-drag' };
  */
 export default function App() {
   const { isListening, error, start, stop } = useAudioCapture();
+  const { theme, surface, setTheme, setSurface, rootClass } = useAppearance();
 
   return (
-    <div className="flex h-screen flex-col gap-3 p-3 text-slate-100">
+    <div className={`flex h-screen flex-col gap-3 p-3 text-slate-100 ${rootClass}`}>
       <header
         style={DRAG}
-        className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-2 backdrop-blur-xl"
+        className="glass-surface relative z-50 flex items-center justify-between rounded-2xl border border-white/10 px-4 py-2"
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">🐺</span>
@@ -32,16 +35,24 @@ export default function App() {
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          style={NO_DRAG}
-          onClick={isListening ? stop : start}
-          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-            isListening ? 'bg-rose-500/80 hover:bg-rose-500' : 'bg-sky-500/80 hover:bg-sky-500'
-          }`}
-        >
-          {isListening ? 'Stop' : 'Start Listening'}
-        </button>
+        <div className="flex items-center gap-2">
+          <AppearanceMenu
+            theme={theme}
+            surface={surface}
+            onThemeChange={setTheme}
+            onSurfaceChange={setSurface}
+          />
+          <button
+            type="button"
+            style={NO_DRAG}
+            onClick={isListening ? stop : start}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              isListening ? 'bg-rose-500/80 hover:bg-rose-500' : 'bg-sky-500/80 hover:bg-sky-500'
+            }`}
+          >
+            {isListening ? 'Stop' : 'Start Listening'}
+          </button>
+        </div>
       </header>
 
       {error && (
