@@ -16,7 +16,11 @@ export function LiveFeed() {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll only the panel's own scroll container — NOT via
+    // `scrollIntoView`, which also scrolls ancestor/window scroll positions and
+    // would drag the collapsed dock around on every transcript update.
+    const scroller = endRef.current?.parentElement;
+    scroller?.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
   }, [finals, interims]);
 
   const interimEntries = (Object.entries(interims) as [SpeakerId, string][]).filter(

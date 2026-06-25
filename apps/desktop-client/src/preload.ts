@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('workiq', {
   sendChunk: (source: AudioSource, buffer: ArrayBuffer) =>
     ipcRenderer.send(IPC.AudioChunk, { source, buffer }),
 
+  // --- Window controls ---
+  collapseWindow: () => ipcRenderer.send(IPC.WindowCollapse),
+  expandWindow: () => ipcRenderer.send(IPC.WindowExpand),
+  moveDock: (dy: number) => ipcRenderer.send(IPC.WindowDockMove, dy),
+
   onTranscript: (cb: (segment: TranscriptSegment) => void) =>
     subscribe(IPC.TranscriptSegment, cb),
   onMemory: (cb: (memory: MemoryState) => void) => subscribe(IPC.MemoryUpdate, cb),

@@ -84,18 +84,11 @@ export function AppearanceMenu({
 
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
     };
-    document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
   return (
@@ -112,24 +105,33 @@ export function AppearanceMenu({
       </button>
 
       {open && (
-        <div
-          role="dialog"
-          aria-label="Appearance settings"
-          className="glass-surface absolute right-0 top-full z-50 mt-2 w-56 space-y-3 rounded-2xl border border-white/10 p-3 shadow-2xl"
-        >
-          <Segmented
-            legend="Theme"
-            options={THEME_OPTIONS}
-            value={theme}
-            onChange={onThemeChange}
+        <>
+          {/* Full-screen catcher so clicking anywhere (even the header's
+              window-drag region) closes the popup. */}
+          <div
+            style={NO_DRAG}
+            className="fixed inset-0 z-40"
+            onPointerDown={() => setOpen(false)}
           />
-          <Segmented
-            legend="Background"
-            options={SURFACE_OPTIONS}
-            value={surface}
-            onChange={onSurfaceChange}
-          />
-        </div>
+          <div
+            role="dialog"
+            aria-label="Appearance settings"
+            className="glass-surface absolute right-0 top-full z-50 mt-2 w-56 space-y-3 rounded-2xl border border-white/10 p-3 shadow-2xl"
+          >
+            <Segmented
+              legend="Theme"
+              options={THEME_OPTIONS}
+              value={theme}
+              onChange={onThemeChange}
+            />
+            <Segmented
+              legend="Background"
+              options={SURFACE_OPTIONS}
+              value={surface}
+              onChange={onSurfaceChange}
+            />
+          </div>
+        </>
       )}
     </div>
   );

@@ -38,6 +38,13 @@ declare global {
       /** Stream a chunk of 16 kHz/16-bit/mono PCM for a given source. */
       sendChunk(source: AudioSource, buffer: ArrayBuffer): void;
 
+      /** Shrink the widget into the small right-edge dock. */
+      collapseWindow(): void;
+      /** Restore the widget to its pre-collapse size and position. */
+      expandWindow(): void;
+      /** Move the collapsed dock vertically by `dy` pixels (x stays pinned). */
+      moveDock(dy: number): void;
+
       // --- main -> renderer event streams (each returns an unsubscribe fn) ---
       onTranscript(cb: (segment: TranscriptSegment) => void): () => void;
       onMemory(cb: (memory: MemoryState) => void): () => void;

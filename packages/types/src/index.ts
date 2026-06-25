@@ -99,6 +99,10 @@ export const IPC = {
   AudioStart: 'audio:start',
   AudioStop: 'audio:stop',
   AudioChunk: 'audio:chunk',
+  // window controls (renderer -> main)
+  WindowCollapse: 'window:collapse',
+  WindowExpand: 'window:expand',
+  WindowDockMove: 'window:dock-move',
   // main -> renderer
   TranscriptSegment: 'transcript:segment',
   MemoryUpdate: 'memory:update',

@@ -21,13 +21,18 @@ export function CopilotRecommendations() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-amber-100"
+          className="glass-surface relative overflow-hidden rounded-2xl border border-amber-400/40 px-4 py-3 text-amber-100"
         >
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-            <span>🐺</span> Wolf Tactic
-          </div>
-          <div className="tactic-md text-sm leading-snug">
-            <Markdown>{tactic.text}</Markdown>
+          {/* Amber tint layered over the (solid or glass) surface so the box
+              stays opaque in solid mode instead of letting the desktop show. */}
+          <span className="pointer-events-none absolute inset-0 bg-amber-400/10" aria-hidden="true" />
+          <div className="relative">
+            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+              <span>🐺</span> Wolf Tactic
+            </div>
+            <div className="tactic-md text-sm leading-snug">
+              <Markdown>{tactic.text}</Markdown>
+            </div>
           </div>
         </motion.div>
       )}
