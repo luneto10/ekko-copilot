@@ -8,7 +8,6 @@ import { LiveFeed } from './LiveFeed';
 export const transcriptPanel: PanelDefinition = {
   id: 'transcript',
   Component: LiveFeed,
-  grow: true,
 };
 
 export { LiveFeed } from './LiveFeed';

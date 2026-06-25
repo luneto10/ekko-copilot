@@ -1,5 +1,6 @@
 import type { PanelDefinition } from './types';
 import { conversationPanel } from '@/features/keynotes';
+import { transcriptPanel } from '@/features/transcript';
 import { copilotPanel } from '@/features/copilot';
 
 /**
@@ -13,14 +14,15 @@ import { copilotPanel } from '@/features/copilot';
  *
  * Nothing in `App.tsx` needs to change — it simply maps over this list.
  *
- * NOTE: the old Live Feed (transcript) and Call Intelligence (memory.md) panels
- * are no longer shown. The transcript + memory pipelines still run inside the
- * main process to ground key notes and tactics — that "call intelligence" is
- * now internal context rather than its own panel.
+ * NOTE: the old Call Intelligence (memory.md) panel is no longer shown — the
+ * transcript + memory pipelines still run inside the main process to ground key
+ * notes and tactics ("call intelligence" as internal context). The Live
+ * Transcript below is a small, scrollable strip just to confirm capture.
  *
  * See `docs/FEATURE_GUIDE.md` for the full step-by-step.
  */
 export const PANELS: PanelDefinition[] = [
   conversationPanel, // Key-note pills + per-note chatbot (grounded by Work IQ)
+  transcriptPanel, // Small live-transcript strip — confirms voices are captured
   copilotPanel, // Wolf Tactic — real-time coaching nudge
 ];
