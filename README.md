@@ -12,6 +12,16 @@ Real-time answers for customer-facing calls, grounded in your Microsoft 365 ecos
 
 For the full architecture see [`docs/DESIGN.md`](docs/DESIGN.md); for working in the UI see [`docs/FEATURE_GUIDE.md`](docs/FEATURE_GUIDE.md).
 
+## Authors
+
+**Microsoft Hackathon 2026**
+
+- Christopher Straw
+- Deepa Venkat
+- Jessica Liu
+- Lucas Gingera
+- Luciano Carvalho
+
 ---
 
 ## Prerequisites
