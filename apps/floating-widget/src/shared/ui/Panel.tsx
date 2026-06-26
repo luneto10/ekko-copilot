@@ -2,29 +2,13 @@ import type { ReactNode } from 'react';
 import { GLASS_SURFACE } from '@/shared/theme';
 
 interface PanelProps {
-  /** Heading shown in the title bar. Omit for a bare (title-less) surface. */
   title?: ReactNode;
-  /** Optional right-aligned slot in the title bar (status, buttons…). */
   action?: ReactNode;
-  /** Panel body. */
   children: ReactNode;
-  /** Extra classes for the outer surface. */
   className?: string;
-  /** Extra classes for the scrollable body (e.g. `space-y-2`, `prose-copilot`). */
   bodyClassName?: string;
 }
 
-/**
- * Reusable translucent panel — a titled, scrollable glass surface.
- *
- * Feature panels compose this instead of re-declaring the same Tailwind classes,
- * which keeps every panel visually consistent and the styling in one place.
- *
- * @example
- * <Panel title="Live Feed" bodyClassName="space-y-2 text-sm">
- *   …content…
- * </Panel>
- */
 export function Panel({ title, action, children, className = '', bodyClassName = '' }: PanelProps) {
   return (
     <div className={`flex h-full flex-col ${GLASS_SURFACE} ${className}`}>

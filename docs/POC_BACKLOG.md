@@ -367,7 +367,7 @@ Legend for each story header: `[Priority · Points · Sprint]`. Status shown onl
 
 #### US-8.6 — SearchWorkIqClient (RAG) `[Must · 5 · S3]`
 - **As a** rep, **I want** real grounded answers, **so that** I can trust the copilot on a live call.
-- **AC:** implements `WorkIqClient`; embeds query → hybrid (vector + keyword) search → top-k chunks → `gpt-4.1-mini` composes answer constrained to retrieved context → returns `{answer, sources}`; if no hits, returns a safe "no source found" answer.
+- **AC:** implements `WorkIqClient`; embeds query -> hybrid (vector + keyword) search -> top-k chunks -> `gpt-4.1-mini` composes answer constrained to retrieved context -> returns `{answer, sources}`; if no hits, returns a safe "no source found" answer.
 - **Tasks:** query embed; search call; grounding prompt (cite-only-from-context); map hits → `WorkIqSource`; timeout/fallback.
 
 #### US-8.7 — Wire factory + config `[Must · 2 · S3]`

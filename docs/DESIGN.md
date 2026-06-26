@@ -124,7 +124,8 @@ graph LR
     SEG --> HOT[HOT: emit to Live Feed<br/>~milliseconds]
     SEG --> MEMLOOP[MEMORY LOOP: buffer>150 words<br/>→ Azure OpenAI → memory.md]
     SEG --> COLD[COLD: customer intent<br/>→ async Work IQ ~1.5-3s]
-    TIMER[60s timer] --> TAC[TACTIC: Azure OpenAI → WOLF TACTIC]
+    MEMLOOP --> TAC[TACTIC: Azure OpenAI -> Next Move]
+    COLD --> TAC
 ```
 
 | Loop | Trigger | Latency budget | Blocking? |
@@ -132,7 +133,7 @@ graph LR
 | **Hot path** | every interim/final segment | ~ms | never |
 | **Memory loop** | buffer crosses 150 words at a final segment | ~0.5–2 s (LLM) | guarded, async |
 | **Cold path** | customer utterance matches an intent | ~1.5–3 s (Work IQ) | fire-and-forget |
-| **Tactic** | `setInterval` every 60 s | ~1 s (LLM) | async |
+| **Tactic** | memory or grounding update | ~1 s (LLM) | async |
 
 ---
 
@@ -425,11 +426,11 @@ sequenceDiagram
 
 ## 10. Sales Tactics
 
-Every `TACTIC_INTERVAL_MS` (60 s), `Orchestrator.generateTactic()`:
+`Orchestrator.generateTactic()` runs after memory or grounding changes:
 - Takes the last 8 exchanges from `history`.
-- Calls `MemoryCompiler.tactic(memoryMarkdown, recent)` → Azure OpenAI (`temperature 0.5`, `max_tokens 120`).
-- The `TACTIC_SYSTEM` prompt makes the model emit one punchy move starting with **"WOLF TACTIC:"**.
-- Emits `copilot:tactic`, rendered as the amber banner in the Copilot panel.
+- Calls `MemoryCompiler.tactic(memoryMarkdown, recent, groundedFacts)` -> Azure OpenAI (`temperature 0.15`, `max_tokens 120`).
+- The prompt emits a short label and one line the rep can say next.
+- Emits `copilot:tactic`, rendered as the Next Move panel.
 
 ---
 
@@ -469,10 +470,10 @@ this bridge** — they live only in the main process.
   renders `<DevInspector/>` when `?view=debug`, else `<App/>`.
 - **State:** [`useCopilotState.ts`](../apps/floating-widget/src/hooks/useCopilotState.ts) subscribes to
   all `window.workiq.on*` events and exposes render-ready state.
-- **Three modules:**
-  1. **Live Feed** — running dialogue grouped/colored by speaker, interim text dimmed.
-  2. **Call Intelligence** — the live `memory.md` rendered with `react-markdown`.
-  3. **Copilot · Work IQ** — glowing box: animated "Searching Work IQ…" → grounded answer + source chips, plus the WOLF TACTIC banner.
+- **Primary modules:**
+  1. **Conversation** — key-note pills with grounded answers, source chips, and follow-up chat.
+  2. **Live Transcript** — compact capture confirmation grouped by speaker.
+  3. **Next Move** — the latest grounded coaching line.
 
 ---
 

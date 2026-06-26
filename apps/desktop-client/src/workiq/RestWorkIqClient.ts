@@ -1,5 +1,4 @@
 import type { WorkIqResponse, WorkIqSource } from '@workiq/types';
-import type { SalesIntent } from '../orchestrator/IntentDetector';
 import type { WorkIqClient } from './WorkIqClient';
 import { env } from '../env';
 
@@ -12,8 +11,7 @@ interface WorkIqApiResponse {
 /**
  * Real Microsoft Work IQ REST client. Non-blocking POST authenticated with an
  * Azure Entra ID bearer token. Swapped in via WORKIQ_MODE=real. The token here
- * is a placeholder env var; replace getBearerToken() with @azure/identity
- * (e.g. ClientSecretCredential / DefaultAzureCredential) for production.
+ * is a placeholder env var; replace getBearerToken() with @azure/identity for production.
  */
 export class RestWorkIqClient implements WorkIqClient {
   private async getBearerToken(): Promise<string> {
@@ -21,7 +19,7 @@ export class RestWorkIqClient implements WorkIqClient {
     return env.workIqBearerToken;
   }
 
-  async query(text: string, intent: SalesIntent): Promise<WorkIqResponse> {
+  async query(text: string, topic: string): Promise<WorkIqResponse> {
     const token = await this.getBearerToken();
     const response = await fetch(`${env.workIqApiBase.replace(/\/$/, '')}/query`, {
       method: 'POST',
@@ -29,7 +27,7 @@ export class RestWorkIqClient implements WorkIqClient {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ query: text, intent }),
+      body: JSON.stringify({ query: text, topic }),
     });
 
     if (!response.ok) {
@@ -43,6 +41,6 @@ export class RestWorkIqClient implements WorkIqClient {
       kind: (c.type as WorkIqSource['kind']) ?? 'document',
     }));
 
-    return { query: text, answer: data.answer ?? '', sources };
+    return { query: text, answer: data.answer ?? '', sources, topic };
   }
 }

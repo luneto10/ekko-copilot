@@ -1,5 +1,6 @@
 import type { WorkIqResponse, WorkIqSource } from '@workiq/types';
 import type { SalesIntent } from '../orchestrator/IntentDetector';
+import { IntentDetector } from '../orchestrator/IntentDetector';
 import type { WorkIqClient } from './WorkIqClient';
 
 interface CannedAnswer {
@@ -13,7 +14,7 @@ const CANNED: Record<SalesIntent, CannedAnswer> = {
       'Standard tier is $32/user/mo; Enterprise is $58/user/mo with volume breaks at 250+ seats. Annual prepay earns a 15% reduction. A custom quote for ~400 seats was drafted last quarter.',
     sources: [
       { title: 'Pricing & Packaging FY26.xlsx', url: 'https://contoso.sharepoint.com/sites/sales/pricing', kind: 'sharepoint' },
-      { title: 'Re: Enterprise quote — 400 seats', url: 'https://outlook.office.com/mail/quote-400', kind: 'email' },
+      { title: 'Re: Enterprise quote - 400 seats', url: 'https://outlook.office.com/mail/quote-400', kind: 'email' },
     ],
   },
   security: {
@@ -58,24 +59,43 @@ const CANNED: Record<SalesIntent, CannedAnswer> = {
     answer:
       'Versus the incumbent: we win on time-to-value (2 weeks vs ~3 months) and native Teams integration. Their advantage is a larger marketplace. Lead with the embedded workflow story.',
     sources: [
-      { title: 'Competitive Battlecard — Us vs Acme.pptx', url: 'https://contoso.sharepoint.com/sites/sales/battlecards', kind: 'sharepoint' },
+      { title: 'Competitive Battlecard - Us vs Acme.pptx', url: 'https://contoso.sharepoint.com/sites/sales/battlecards', kind: 'sharepoint' },
     ],
   },
   discount: {
     answer:
-      'Up to 15% is rep-approved with annual prepay; 16–25% needs director sign-off and a 24-month term. Avoid leading with price — anchor on the ROI model first.',
+      'Up to 15% is rep-approved with annual prepay; 16-25% needs director sign-off and a 24-month term. If the customer asks price, answer it directly before discussing ROI.',
     sources: [
       { title: 'Discount Approval Matrix.xlsx', url: 'https://contoso.sharepoint.com/sites/sales/discounts', kind: 'sharepoint' },
     ],
   },
 };
 
-/** Simulated Work IQ grounding with realistic enterprise latency (1.5–3s). */
+const GENERIC_SOURCES: WorkIqSource[] = [
+  { title: 'Account Notes - Contoso.docx', url: 'https://contoso.sharepoint.com/sites/sales/notes', kind: 'sharepoint' },
+  { title: 'Re: Follow-up from discovery call', url: 'https://outlook.office.com/mail/discovery', kind: 'email' },
+];
+
 export class MockWorkIqClient implements WorkIqClient {
-  async query(text: string, intent: SalesIntent): Promise<WorkIqResponse> {
+  private readonly detector = new IntentDetector();
+
+  async query(text: string, topic: string): Promise<WorkIqResponse> {
     const latency = 1500 + Math.random() * 1500;
     await new Promise((resolve) => setTimeout(resolve, latency));
-    const canned = CANNED[intent];
-    return { query: text, answer: canned.answer, sources: canned.sources };
+
+    const intent = this.detector.detect(`${topic} ${text}`);
+    if (intent) {
+      const canned = CANNED[intent];
+      return { query: text, answer: canned.answer, sources: canned.sources, topic };
+    }
+
+    return {
+      query: text,
+      answer:
+        `Here's what I found on ${topic}: our materials cover this and I've pulled the most ` +
+        `relevant files. Confirm the specifics below before you answer the customer.`,
+      sources: GENERIC_SOURCES,
+      topic,
+    };
   }
 }

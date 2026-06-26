@@ -6,3 +6,7 @@ out/
 *.log
 .DS_Store
 .turbo/
+
+# MSAL token cache written by the Graph device-code auth flow
+.msal-cache.json
+**/.msal-cache.json

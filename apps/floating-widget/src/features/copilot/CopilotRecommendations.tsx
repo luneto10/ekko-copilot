@@ -1,85 +1,67 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Markdown from 'react-markdown';
-import { SOURCE_ICON } from '@/shared/theme';
+import { bridge } from '@/shared/bridge';
 import { useCopilot } from './useCopilot';
 
-/**
- * Copilot · Work IQ panel — the "act now" surface.
- *
- * Shows (top to bottom): the latest Wolf Tactic (the exact line to say, in
- * bold), then a glowing box that is either an animated "Searching Work IQ…"
- * badge, the grounded answer + source chips, or an idle hint.
- *
- * Self-contained: pulls state from `useCopilot`.
- */
+// Shows the latest coachable line only; grounded Q&A lives in the Conversation panel.
 export function CopilotRecommendations() {
-  const { searching, workIq, tactic } = useCopilot();
+  const { tactic } = useCopilot();
+
+  const generate = () => {
+    bridge.forceMemoryCompile();
+    bridge.forceTactic();
+  };
+
+  if (!tactic) {
+    return (
+      <div className="glass-surface flex items-center justify-between gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-400">
+        <span className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-300/80" />
+          Next move appears while listening.
+        </span>
+        <GenerateButton onClick={generate} />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-2">
-      {tactic && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-amber-100"
-        >
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-            <span>🐺</span> Wolf Tactic
+    <motion.div
+      key={tactic.ts}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-surface relative overflow-hidden rounded-xl border border-emerald-300/30 px-4 py-3 text-slate-100 shadow-[0_18px_44px_rgba(2,6,23,0.22)]"
+    >
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-400/12 via-cyan-300/8 to-transparent" aria-hidden="true" />
+      <div className="relative">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+            Next Move
           </div>
-          <div className="tactic-md text-sm leading-snug">
-            <Markdown>{tactic.text}</Markdown>
-          </div>
-        </motion.div>
-      )}
-
-      <div
-        className={`rounded-2xl border border-sky-400/30 bg-slate-900/70 px-4 py-3 backdrop-blur-xl ${
-          searching ? 'animate-pulse-glow' : ''
-        }`}
-      >
-        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-sky-300">
-          Copilot · Work IQ
-        </h2>
-
-        <AnimatePresence mode="wait">
-          {searching ? (
-            <motion.div
-              key="searching"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-2 text-sm text-sky-200"
-            >
-              <span className="inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-sky-400" />
-              Searching Work IQ for “{searching}”…
-            </motion.div>
-          ) : workIq ? (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-2 text-sm"
-            >
-              <p className="text-slate-100">{workIq.answer}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {workIq.sources.map((source) => (
-                  <span
-                    key={source.url}
-                    title={source.url}
-                    className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300"
-                  >
-                    {SOURCE_ICON[source.kind]} {source.title}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-          ) : (
-            <p className="text-xs italic text-slate-500">
-              Grounded answers appear here when the customer asks about pricing, security, SLAs…
-            </p>
-          )}
-        </AnimatePresence>
+          <GenerateButton onClick={generate} />
+        </div>
+        <div className="tactic-md text-sm leading-snug">
+          <Markdown>{tactic.text}</Markdown>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
+
+function GenerateButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Refresh next move"
+      aria-label="Refresh next move"
+      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-emerald-300/30 text-emerald-200/80 transition hover:bg-emerald-300/15 hover:text-emerald-100"
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10" />
+      </svg>
+    </button>
+  );
+}
+
+

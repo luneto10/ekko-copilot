@@ -7,13 +7,92 @@ body,
 #root {
   margin: 0;
   height: 100%;
-  /* Transparent so the frameless Electron window shows the desktop behind it. */
   background: transparent;
 }
 
 #root {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Aptos', 'Segoe UI Variable', 'Segoe UI', sans-serif;
   overflow: hidden;
+}
+
+.theme-dark.surface-transparent {
+  --surface-bg: rgba(15, 23, 42, 0.72);
+}
+.theme-dark.surface-solid {
+  --surface-bg: rgb(15, 23, 42);
+}
+.theme-light.surface-transparent {
+  --surface-bg: rgba(248, 250, 252, 0.82);
+}
+.theme-light.surface-solid {
+  --surface-bg: rgb(248, 250, 252);
+}
+
+.theme-dark {
+  --surface-solid: rgb(15, 23, 42);
+}
+.theme-light {
+  --surface-solid: rgb(248, 250, 252);
+}
+
+.glass-surface {
+  background-color: var(--surface-bg, rgba(15, 23, 42, 0.72));
+}
+.surface-transparent .glass-surface {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.dock-hover-solid:hover {
+  background-color: var(--surface-solid);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.theme-light {
+  color: #0f172a;
+}
+.theme-light .text-slate-100 {
+  color: #0f172a;
+}
+.theme-light .text-slate-200 {
+  color: #1e293b;
+}
+.theme-light .text-slate-300 {
+  color: #334155;
+}
+.theme-light .text-slate-400 {
+  color: #475569;
+}
+.theme-light .text-slate-500 {
+  color: #64748b;
+}
+.theme-light .text-sky-200 {
+  color: #075985;
+}
+.theme-light .text-sky-300 {
+  color: #0369a1;
+}
+.theme-light .text-amber-100 {
+  color: #92400e;
+}
+.theme-light .text-amber-300 {
+  color: #b45309;
+}
+.theme-light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+.theme-light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+.theme-light .prose-copilot li {
+  color: #334155;
+}
+.theme-light .prose-copilot strong {
+  color: #0f172a;
+}
+.theme-light .tactic-md strong {
+  color: #065f46;
 }
 
 ::-webkit-scrollbar {
@@ -24,7 +103,6 @@ body,
   border-radius: 9999px;
 }
 
-/* Lightweight markdown styling for the Call Intelligence panel. */
 .prose-copilot h2 {
   font-size: 0.62rem;
   text-transform: uppercase;
@@ -50,10 +128,14 @@ body,
   color: #e2e8f0;
 }
 .prose-copilot li::before {
-  content: '▸';
+  content: '';
   position: absolute;
   left: 0;
-  color: #64748b;
+  top: 0.55em;
+  height: 0.28rem;
+  width: 0.28rem;
+  border-radius: 9999px;
+  background: #64748b;
 }
 .prose-copilot p {
   margin: 0.25rem 0;
@@ -63,7 +145,6 @@ body,
   font-weight: 600;
 }
 
-/* Wolf Tactic markdown: make the spoken line pop. */
 .tactic-md p {
   margin: 0;
 }
