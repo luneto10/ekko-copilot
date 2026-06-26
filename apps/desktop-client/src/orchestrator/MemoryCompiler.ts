@@ -1,5 +1,5 @@
-import { AzureOpenAI } from 'openai';
-import { env, isOpenAiConfigured } from '../env';
+import type { AzureOpenAI } from 'openai';
+import { env, createOpenAiClient } from '../env';
 import { MEMORY_SYSTEM, TACTIC_SYSTEM } from './prompts';
 
 export class MemoryCompiler {
@@ -48,14 +48,4 @@ export class MemoryCompiler {
     });
     return completion.choices[0]?.message?.content?.trim() || '';
   }
-}
-
-function createOpenAiClient(): AzureOpenAI | null {
-  if (!isOpenAiConfigured()) return null;
-  return new AzureOpenAI({
-    endpoint: env.openAiEndpoint,
-    apiKey: env.openAiKey,
-    apiVersion: env.openAiApiVersion,
-    deployment: env.openAiDeployment,
-  });
 }

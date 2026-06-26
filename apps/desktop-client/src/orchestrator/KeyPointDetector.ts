@@ -1,5 +1,5 @@
-import { AzureOpenAI } from 'openai';
-import { env, isOpenAiConfigured } from '../env';
+import type { AzureOpenAI } from 'openai';
+import { env, createOpenAiClient } from '../env';
 import { debug } from '../debug/DebugBus';
 import { KEYPOINT_SYSTEM } from './prompts';
 import { IntentDetector } from './IntentDetector';
@@ -67,16 +67,10 @@ class KeywordKeyPointDetector implements KeyPointDetector {
 }
 
 export function createKeyPointDetector(): KeyPointDetector {
-  if (isOpenAiConfigured()) {
+  const client = createOpenAiClient();
+  if (client) {
     debug.gauge('keypoint.detector', 'ai');
-    return new AiKeyPointDetector(
-      new AzureOpenAI({
-        endpoint: env.openAiEndpoint,
-        apiKey: env.openAiKey,
-        apiVersion: env.openAiApiVersion,
-        deployment: env.openAiDeployment,
-      }),
-    );
+    return new AiKeyPointDetector(client);
   }
   debug.gauge('keypoint.detector', 'keyword');
   return new KeywordKeyPointDetector();

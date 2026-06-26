@@ -1,5 +1,6 @@
 import path from 'node:path';
 import dotenv from 'dotenv';
+import { AzureOpenAI } from 'openai';
 
 // Load .env from the desktop-client folder first, then fall back to the monorepo root.
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -32,3 +33,14 @@ export const isSpeechConfigured = () => Boolean(env.speechKey && env.speechRegio
 export const isOpenAiConfigured = () => Boolean(env.openAiEndpoint && env.openAiKey);
 export const isGraphConfigured = () =>
   Boolean(env.graphAccessToken || (env.entraTenantId && env.entraClientId));
+
+/** Single place that builds the Azure OpenAI client, or null when unconfigured. */
+export function createOpenAiClient(): AzureOpenAI | null {
+  if (!isOpenAiConfigured()) return null;
+  return new AzureOpenAI({
+    endpoint: env.openAiEndpoint,
+    apiKey: env.openAiKey,
+    apiVersion: env.openAiApiVersion,
+    deployment: env.openAiDeployment,
+  });
+}

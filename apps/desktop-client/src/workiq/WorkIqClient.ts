@@ -1,7 +1,6 @@
 import path from 'node:path';
-import { AzureOpenAI } from 'openai';
 import type { WorkIqResponse } from '@workiq/types';
-import { env, isGraphConfigured, isOpenAiConfigured } from '../env';
+import { env, isGraphConfigured, createOpenAiClient } from '../env';
 import { RestWorkIqClient } from './RestWorkIqClient';
 import { MockWorkIqClient } from './MockWorkIqClient';
 import { GraphWorkIqClient } from './GraphWorkIqClient';
@@ -26,14 +25,7 @@ function createGraphClient(): WorkIqClient {
         env.graphScopes,
         path.join(__dirname, '..', '.msal-cache.json'),
       );
-  const openai = isOpenAiConfigured()
-    ? new AzureOpenAI({
-        endpoint: env.openAiEndpoint,
-        apiKey: env.openAiKey,
-        apiVersion: env.openAiApiVersion,
-        deployment: env.openAiDeployment,
-      })
-    : null;
+  const openai = createOpenAiClient();
   return new GraphWorkIqClient({ tokenProvider, openai, deployment: env.openAiDeployment });
 }
 

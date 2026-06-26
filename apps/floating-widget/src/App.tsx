@@ -95,7 +95,7 @@ export default function App() {
               </svg>
             </button>
             <div className="leading-tight">
-              <div className="text-sm font-semibold tracking-wide">WorkIQ Sales Copilot</div>
+              <div className="text-sm font-semibold tracking-wide">ekko Sales Copilot</div>
               <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-400">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${isListening ? 'bg-emerald-400' : 'bg-slate-500'}`}

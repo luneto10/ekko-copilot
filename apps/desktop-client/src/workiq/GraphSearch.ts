@@ -28,6 +28,15 @@ const STOP_WORDS = new Set([
   'this', 'that', 'it', 'be', 'have', 'has', 'will', 'would', 'should', 'you',
 ]);
 
+/** Split text into significant, deduped search terms (lowercased, >= 3 chars). */
+export function tokenize(text: string): string[] {
+  const terms = text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((word) => word.length >= 3 && !STOP_WORDS.has(word));
+  return [...new Set(terms)];
+}
+
 export function toSource(hit: GraphHit): WorkIqSource {
   const resource = hit.resource ?? {};
   const odataType = resource['@odata.type'] ?? '';
@@ -46,24 +55,13 @@ export function stripGraphText(value: string): string {
 }
 
 export function buildSearchQuery(topic: string, fallback: string): string {
-  const source = (topic || fallback).toLowerCase();
-  const terms = source
-    .split(/[^a-z0-9]+/i)
-    .filter((word) => word.length >= 3 && !STOP_WORDS.has(word));
-  const unique = [...new Set(terms)];
+  const unique = tokenize(topic || fallback);
   if (unique.length === 0) return (topic || fallback).trim() || '*';
   return unique.join(' OR ');
 }
 
 export function rankAndTrim(items: RankedItem[], query: string, limit: number): RankedItem[] {
-  const terms = [
-    ...new Set(
-      query
-        .toLowerCase()
-        .split(/[^a-z0-9]+/i)
-        .filter((word) => word.length >= 3 && word !== 'or'),
-    ),
-  ];
+  const terms = tokenize(query);
 
   const seen = new Set<string>();
   return items
