@@ -4,15 +4,6 @@ import type { DebugEvent, DebugLevel, DebugMetrics, SpeakerId } from '@workiq/ty
 import { bridge } from '@/shared/bridge';
 import { StatusPill } from '@/shared/ui/StatusPill';
 
-/**
- * Dev Inspector — the dev-only second window (opened at `?view=debug`).
- *
- * Visualizes the live pipeline coming from the main-process DebugBus: a
- * colour-coded event log (filterable + pausable), rolling metrics, the raw
- * `memory.md`, and a transcript injector that drives the whole pipeline without
- * speaking. Talks to main exclusively through the shared `bridge`.
- */
-
 const LEVELS: DebugLevel[] = ['event', 'info', 'warn', 'error'];
 
 const LEVEL_STYLE: Record<DebugLevel, string> = {
@@ -22,7 +13,6 @@ const LEVEL_STYLE: Record<DebugLevel, string> = {
   error: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
 };
 
-/** Colour per pipeline stage, so the log is easy to scan. */
 const CATEGORY_COLOR: Record<string, string> = {
   audio: 'text-cyan-300',
   speech: 'text-emerald-300',
@@ -36,7 +26,6 @@ const CATEGORY_COLOR: Record<string, string> = {
   test: 'text-pink-300',
 };
 
-/** One-click customer questions that each map to a sales intent. */
 const QUICK_INJECTS: { label: string; text: string }[] = [
   { label: 'Pricing', text: 'How much does the enterprise plan cost per user?' },
   { label: 'Security', text: 'Is your platform SOC 2 compliant and how is data encrypted?' },
@@ -46,10 +35,6 @@ const QUICK_INJECTS: { label: string; text: string }[] = [
   { label: 'Competitor', text: 'How are you different from Salesforce?' },
 ];
 
-/**
- * A scripted Rep <-> Customer conversation: enough words to trigger a memory
- * compile, and customer questions that fire the pricing/security/contract intents.
- */
 const SAMPLE_CALL: { speaker: SpeakerId; text: string }[] = [
   { speaker: 'Speaker_1', text: "Thanks for joining today, Carlos. I'd love to understand your current workflow and where the friction is." },
   { speaker: 'Speaker_2', text: 'Sure. Right now my team wastes hours every week reconciling data across three different tools.' },
@@ -156,16 +141,16 @@ export function DevInspector() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-white/10 px-4 py-2">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <span>🔬</span> WorkIQ Dev Inspector
+          WorkIQ Dev Inspector
         </div>
         <div className="flex items-center gap-2 text-[11px]">
           <StatusPill ok={gauges['speech.configured'] === true} label="Speech" />
           <StatusPill ok={gauges['openai.configured'] === true} label="OpenAI" />
           <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-slate-300">
-            Work IQ: {String(gauges['workiq.mode'] ?? '—')}
+            Work IQ: {String(gauges['workiq.mode'] ?? '-')}
           </span>
           <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-slate-400">
-            {String(gauges['openai.deployment'] ?? '—')}
+            {String(gauges['openai.deployment'] ?? '-')}
           </span>
         </div>
       </header>
@@ -201,7 +186,7 @@ export function DevInspector() {
               setInjectText('');
             }
           }}
-          placeholder="Type a line and press Enter to feed the pipeline…"
+          placeholder="Type a line and press Enter to feed the pipeline..."
           className="min-w-[220px] flex-1 rounded-md border border-white/10 bg-slate-900 px-2 py-1 text-xs outline-none focus:border-sky-500/50"
         />
         {QUICK_INJECTS.map((q) => (
@@ -223,7 +208,7 @@ export function DevInspector() {
           onClick={playSampleCall}
           className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-500/25"
         >
-          ▶ Play sample call
+          Play sample call
         </button>
         <button
           onClick={() => bridge.forceMemoryCompile()}
@@ -238,7 +223,7 @@ export function DevInspector() {
           Generate tactic now
         </button>
         <span className="text-[10px] text-slate-500">
-          Memory auto-compiles after ~{String(gauges['memory.flushWords'] ?? 40)} words — use these to force it.
+          Memory auto-compiles after ~{String(gauges['memory.flushWords'] ?? 40)} words. Use these to force it.
         </span>
       </div>
 
@@ -263,7 +248,7 @@ export function DevInspector() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="filter…"
+            placeholder="filter..."
             className="w-40 rounded-md border border-white/10 bg-slate-900 px-2 py-1 outline-none focus:border-sky-500/50"
           />
           {LEVELS.map((lvl) => (
@@ -344,7 +329,7 @@ export function DevInspector() {
               <Markdown>{latestMemory}</Markdown>
             </div>
           ) : (
-            <p className="italic text-slate-600">— no memory compiled yet —</p>
+            <p className="italic text-slate-600">No memory compiled yet.</p>
           )}
         </div>
       )}
@@ -352,7 +337,6 @@ export function DevInspector() {
   );
 }
 
-/** A single metric card in the Dev Inspector's metrics row. */
 function Stat({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5">

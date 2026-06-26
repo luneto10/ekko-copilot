@@ -6,42 +6,22 @@ import { AppearanceMenu } from '@/shared/ui/AppearanceMenu';
 import { CollapsedDock } from '@/shared/ui/CollapsedDock';
 import { useAppearance } from '@/shared/useAppearance';
 import { bridge } from '@/shared/bridge';
+import { DRAG_REGION, NO_DRAG_REGION } from '@/shared/electron';
 import { PANELS } from '@/panels/registry';
 
-/** Electron frameless-window drag regions (see bridge.d.ts CSSProperties aug). */
-const DRAG: CSSProperties = { WebkitAppRegion: 'drag' };
-const NO_DRAG: CSSProperties = { WebkitAppRegion: 'no-drag' };
-
-/**
- * "Genie" transforms: content squishes toward the right edge (where the dock
- * sits) as it gets sucked into the hole, and bursts back out from there. The
- * `transformOrigin: right center` makes everything converge on that point.
- */
 const GENIE_HIDDEN = { opacity: 0, scaleX: 0.04, scaleY: 0.16, x: 90 };
 const GENIE_SHOWN = { opacity: 1, scaleX: 1, scaleY: 1, x: 0 };
 const GENIE_ORIGIN: CSSProperties = { transformOrigin: 'right center' };
 
-/**
- * The widget's layout shell.
- *
- * Owns only the header (brand + capture control), then renders whatever the
- * panel registry lists, in order. Each panel is self-contained, so this file
- * stays tiny: change the *layout* here, change *which* panels show in
- * `src/panels/registry.ts`.
- */
+// App owns the window shell; feature content stays behind the panel registry.
 export default function App() {
   const { isListening, error, start, stop } = useAudioCapture();
   const { theme, surface, setTheme, setSurface, rootClass } = useAppearance();
   const [collapsed, setCollapsed] = useState(false);
-  // `docked` tracks when the Electron window has actually shrunk to the dock.
-  // It lags `collapsed` so the full-view genie plays at full size first.
   const [docked, setDocked] = useState(false);
 
   const toggleListening = isListening ? stop : start;
 
-  // The full view is never unmounted (so panel state — transcript, memory,
-  // copilot — survives collapse). Collapsing just animates it out; the window
-  // resize is deferred until that genie finishes, then the dock appears.
   const collapse = () => setCollapsed(true);
   const expand = () => {
     bridge.expandWindow();
@@ -55,17 +35,12 @@ export default function App() {
     }
   };
 
-  // Dev escape hatch: snap the renderer back to expanded and force the window
-  // to its default size, in case a resize gets stuck.
   const resetSize = () => {
     setDocked(false);
     setCollapsed(false);
     bridge.resetWindow();
   };
 
-  // Dev shortcuts:
-  //   Ctrl/Cmd+M  toggle collapsed/expanded
-  //   Ctrl/Cmd+0  reset the window to its default size (escape hatch)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
@@ -84,7 +59,6 @@ export default function App() {
 
   return (
     <div className={`relative h-screen w-screen overflow-hidden ${rootClass}`}>
-      {/* Full view — always mounted; genies out to the right edge when collapsed. */}
       <motion.div
         initial={false}
         animate={collapsed ? GENIE_HIDDEN : GENIE_SHOWN}
@@ -94,13 +68,13 @@ export default function App() {
         className="absolute inset-0 flex h-full flex-col gap-3 p-3 text-slate-100"
       >
         <header
-          style={DRAG}
-          className="glass-surface relative z-50 flex items-center justify-between rounded-2xl border border-white/10 px-4 py-2"
+          style={DRAG_REGION}
+          className="glass-surface relative z-50 flex items-center justify-between rounded-xl border border-white/10 px-4 py-2 shadow-[0_18px_50px_rgba(2,6,23,0.28)]"
         >
           <div className="flex items-center gap-2">
             <button
               type="button"
-              style={NO_DRAG}
+              style={NO_DRAG_REGION}
               onClick={collapse}
               title="Collapse to side dock"
               aria-label="Collapse to side dock"
@@ -121,9 +95,12 @@ export default function App() {
               </svg>
             </button>
             <div className="leading-tight">
-              <div className="text-sm font-semibold">WorkIQ Sales Copilot</div>
-              <div className="text-[10px] uppercase tracking-widest text-slate-400">
-                {isListening ? 'Listening' : 'Idle'}
+              <div className="text-sm font-semibold tracking-wide">WorkIQ Sales Copilot</div>
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-slate-400">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${isListening ? 'bg-emerald-400' : 'bg-slate-500'}`}
+                />
+                {isListening ? 'Live' : 'Ready'}
               </div>
             </div>
           </div>
@@ -136,13 +113,13 @@ export default function App() {
             />
             <button
               type="button"
-              style={NO_DRAG}
+              style={NO_DRAG_REGION}
               onClick={toggleListening}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                isListening ? 'bg-rose-500/80 hover:bg-rose-500' : 'bg-sky-500/80 hover:bg-sky-500'
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold text-white transition ${
+                isListening ? 'bg-rose-500/85 hover:bg-rose-500' : 'bg-sky-500/85 hover:bg-sky-500'
               }`}
             >
-              {isListening ? 'Stop' : 'Start Listening'}
+              {isListening ? 'Stop' : 'Listen'}
             </button>
           </div>
         </header>
@@ -160,7 +137,6 @@ export default function App() {
         ))}
       </motion.div>
 
-      {/* Dock — appears once the window has shrunk; bursts out of the right edge. */}
       <motion.div
         initial={false}
         animate={docked ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.2 }}

@@ -6,29 +6,24 @@ import { Orchestrator } from './orchestrator/Orchestrator';
 import { debug } from './debug/DebugBus';
 
 const DEV_URL = 'http://127.0.0.1:5173';
-
-/** Full-window dimensions, restored when expanding from the collapsed dock. */
 const EXPANDED_MIN_WIDTH = 360;
 const EXPANDED_MIN_HEIGHT = 420;
-/** Default window size, used by the dev "reset size" action. */
 const DEFAULT_WIDTH = 440;
 const DEFAULT_HEIGHT = 680;
-/** Size of the small right-edge dock shown while collapsed. */
 const COLLAPSED_WIDTH = 96;
 const COLLAPSED_HEIGHT = 96;
 
 let widgetWindow: BrowserWindow | null = null;
 let debugWindow: BrowserWindow | null = null;
 let orchestrator: Orchestrator | null = null;
-/** Bounds saved when collapsing, so expanding restores the exact window. */
 let expandedBounds: Electron.Rectangle | null = null;
 
 function createWidgetWindow(): void {
   widgetWindow = new BrowserWindow({
-    width: 440,
-    height: 680,
-    minWidth: 360,
-    minHeight: 420,
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+    minWidth: EXPANDED_MIN_WIDTH,
+    minHeight: EXPANDED_MIN_HEIGHT,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -44,7 +39,6 @@ function createWidgetWindow(): void {
     },
   });
 
-  // Keep the widget above full-screen apps (e.g. a Teams call).
   widgetWindow.setAlwaysOnTop(true, 'screen-saver');
   widgetWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
@@ -61,10 +55,6 @@ function createWidgetWindow(): void {
   });
 }
 
-/**
- * A normal (framed, opaque) window that visualizes the live pipeline: event log,
- * counters, latencies, raw memory.md, and a transcript injector. Dev only.
- */
 function createDebugWindow(): void {
   debugWindow = new BrowserWindow({
     width: 980,
@@ -89,11 +79,6 @@ function createDebugWindow(): void {
   });
 }
 
-/**
- * Grant the renderer system-audio loopback + microphone access without a picker
- * dialog. `audio: 'loopback'` (Electron >= 31 on Windows) captures the computer's
- * output so we can hear the remote Teams participant.
- */
 function setupMediaAccess(): void {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => {
     callback(true);
@@ -107,7 +92,6 @@ function setupMediaAccess(): void {
           callback({ video: sources[0], audio: 'loopback' });
         })
         .catch(() => {
-          // No screen source available — deny gracefully.
           callback({});
         });
     },
@@ -121,11 +105,6 @@ function toArrayBuffer(buffer: ArrayBuffer | Uint8Array): ArrayBuffer {
   return source.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 }
 
-/**
- * Shrink the widget into a small circular dock pinned to the right edge of the
- * display it currently sits on, keeping roughly the same vertical position. The
- * full bounds are saved so `expandWidget` can restore them exactly.
- */
 function collapseWidget(): void {
   if (!widgetWindow) return;
   const bounds = widgetWindow.getBounds();
@@ -136,13 +115,11 @@ function collapseWidget(): void {
   const maxY = workArea.y + workArea.height - COLLAPSED_HEIGHT;
   const y = Math.min(Math.max(bounds.y, workArea.y), maxY);
 
-  // Drop the min-size constraint so the window can shrink to the dock size.
   widgetWindow.setMinimumSize(1, 1);
   widgetWindow.setResizable(false);
   widgetWindow.setBounds({ x, y, width: COLLAPSED_WIDTH, height: COLLAPSED_HEIGHT });
 }
 
-/** Restore the widget to its pre-collapse size and position. */
 function expandWidget(): void {
   if (!widgetWindow) return;
   widgetWindow.setMinimumSize(EXPANDED_MIN_WIDTH, EXPANDED_MIN_HEIGHT);
@@ -150,11 +127,6 @@ function expandWidget(): void {
   if (expandedBounds) widgetWindow.setBounds(expandedBounds);
 }
 
-/**
- * Move the collapsed dock vertically by `dy` pixels. The x position stays
- * pinned to the right edge of the display, so the dock can only slide up and
- * down — never left/right.
- */
 function moveDock(dy: number): void {
   if (!widgetWindow) return;
   const bounds = widgetWindow.getBounds();
@@ -165,10 +137,6 @@ function moveDock(dy: number): void {
   widgetWindow.setBounds({ x, y, width: bounds.width, height: bounds.height });
 }
 
-/**
- * Dev escape hatch: force the window back to its default size and re-center it
- * on the current display, clearing any saved collapse bounds.
- */
 function resetWindow(): void {
   if (!widgetWindow) return;
   expandedBounds = null;
@@ -178,6 +146,11 @@ function resetWindow(): void {
   const x = Math.round(workArea.x + (workArea.width - DEFAULT_WIDTH) / 2);
   const y = Math.round(workArea.y + (workArea.height - DEFAULT_HEIGHT) / 2);
   widgetWindow.setBounds({ x, y, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+}
+
+function externalBrowserUrl(url: string): string | null {
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return null;
+  return /\.sharepoint\.com/i.test(url) && !url.includes('?') ? `${url}?web=1` : url;
 }
 
 function registerIpc(): void {
@@ -201,12 +174,8 @@ function registerIpc(): void {
   ipcMain.on(IPC.WindowDockMove, (_event, dy: number) => moveDock(dy));
   ipcMain.on(IPC.WindowReset, () => resetWindow());
   ipcMain.on(IPC.ShellOpenExternal, (_event, url: string) => {
-    // Only allow real web links to be opened externally.
-    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
-    // SharePoint/OneDrive serves direct file URLs as a DOWNLOAD; `?web=1` opens
-    // them in the browser viewer instead.
-    const isSharePoint = /\.sharepoint\.com/i.test(url);
-    const target = isSharePoint && !url.includes('?') ? `${url}?web=1` : url;
+    const target = externalBrowserUrl(url);
+    if (!target) return;
     void shell.openExternal(target);
   });
   ipcMain.handle(
@@ -232,10 +201,10 @@ app.whenReady().then(() => {
   debug.gauge('openai.deployment', env.openAiDeployment);
   debug.gauge('workiq.mode', env.workIqMode);
   if (!isSpeechConfigured()) {
-    debug.warn('config', 'AZURE_SPEECH_KEY/REGION not set — transcription disabled (UI still runs).');
+    debug.warn('config', 'AZURE_SPEECH_KEY/REGION not set; transcription disabled (UI still runs).');
   }
   if (!isOpenAiConfigured()) {
-    debug.warn('config', 'AZURE_OPENAI_* not set — memory/tactics disabled (UI still runs).');
+    debug.warn('config', 'AZURE_OPENAI_* not set; memory/tactics disabled (UI still runs).');
   }
   debug.info('config', `Work IQ mode: ${env.workIqMode}`);
 

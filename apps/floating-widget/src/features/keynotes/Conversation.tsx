@@ -1,25 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import type { WorkIqSource } from '@workiq/types';
 import { motion } from 'framer-motion';
 import { SOURCE_ICON } from '@/shared/theme';
 import { bridge } from '@/shared/bridge';
 import { useConversation } from './useConversation';
 import type { ChatMessage, KeyNote } from './types';
 
-/**
- * Conversation panel — replaces the old Live Feed + Call Intelligence.
- *
- * Top: a horizontally-scrollable row of "key note" pills, one per question
- * raised in the call. Selecting a pill opens its own chat (bottom), pre-seeded
- * with the Work IQ answer + the files it found, where the rep can ask follow-ups.
- */
 export function Conversation() {
   const { notes, selected, selectedId, selectNote, ask, removeNote, flash } = useConversation();
   const [draft, setDraft] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // Keep the chat pinned to the newest message. Scroll only this container so
-  // it never disturbs the window/dock.
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
   }, [selectedId, selected?.messages.length]);
@@ -33,10 +25,9 @@ export function Conversation() {
 
   return (
     <div className="glass-surface flex h-full flex-col rounded-2xl border border-white/10">
-      {/* Key-note pills — scroll horizontally to pick one. */}
       <div className="border-b border-white/10 px-3 py-2">
         {notes.length === 0 ? (
-          <span className="text-xs italic text-slate-500">Key notes from the call appear here…</span>
+          <span className="text-xs italic text-slate-500">Key notes from the call appear here...</span>
         ) : (
           <PillRail
             notes={notes}
@@ -48,7 +39,6 @@ export function Conversation() {
         )}
       </div>
 
-      {/* Chat for the selected note. */}
       <div ref={chatRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-3 text-sm">
         {!selected ? (
           <div className="flex h-full items-center justify-center px-4 text-center text-xs italic text-slate-500">
@@ -59,12 +49,11 @@ export function Conversation() {
         )}
       </div>
 
-      {/* Ask box. */}
       <form onSubmit={submit} className="flex items-center gap-2 border-t border-white/10 p-2">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={selected ? `Ask about ${selected.topic}…` : 'Select a key note to chat'}
+          placeholder={selected ? `Ask about ${selected.topic}...` : 'Select a key note to chat'}
           disabled={!selected}
           className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 outline-none transition focus:border-sky-500/50 disabled:opacity-50"
         />
@@ -80,7 +69,6 @@ export function Conversation() {
   );
 }
 
-/** Smoothly bring a pill (by id) fully into view inside its rail. */
 function scrollPillIntoView(rail: HTMLDivElement | null, pillId: string) {
   if (!rail) return;
   const el = Array.from(rail.children).find(
@@ -96,10 +84,6 @@ function scrollPillIntoView(rail: HTMLDivElement | null, pillId: string) {
   }
 }
 
-/**
- * A horizontally-scrollable rail of key-note pills, with edge fades + chevron
- * buttons that appear only when there's more to scroll to.
- */
 function PillRail({
   notes,
   selectedId,
@@ -134,15 +118,11 @@ function PillRail({
     return () => observer.disconnect();
   }, [update, notes.length]);
 
-  // Scroll the SELECTED pill into view — so when a brand-new note opens, the
-  // rep is taken right to it.
   useEffect(() => {
     if (selectedId == null) return;
     scrollPillIntoView(railRef.current, selectedId);
   }, [selectedId, notes.length]);
 
-  // "Show where it is": a repeated question scrolls its existing pill into view
-  // and pulses it briefly — without selecting or opening its chat.
   useEffect(() => {
     if (!flash) return;
     scrollPillIntoView(railRef.current, flash.id);
@@ -200,7 +180,6 @@ function PillRail({
   );
 }
 
-/** Tiny left/right chevron used by the scroll affordances. */
 function Chevron({ dir }: { dir: 'left' | 'right' }) {
   return (
     <svg
@@ -219,7 +198,6 @@ function Chevron({ dir }: { dir: 'left' | 'right' }) {
   );
 }
 
-/** A single key-note pill. Animates in so a newly-detected note draws the eye. */
 function Pill({
   note,
   active,
@@ -287,14 +265,13 @@ function Pill({
   );
 }
 
-/** The chat thread for one note: messages + suggested follow-ups. */
 function Thread({ note, onSuggestion }: { note: KeyNote; onSuggestion: (q: string) => void }) {
   return (
     <>
       {note.status === 'searching' && note.messages.length === 0 && (
         <div className="flex items-center gap-2 text-sky-200">
           <span className="h-2 w-2 animate-ping rounded-full bg-sky-400" />
-          Searching Work IQ for “{note.query}”…
+          Searching Work IQ for "{note.query}"...
         </div>
       )}
 
@@ -320,7 +297,6 @@ function Thread({ note, onSuggestion }: { note: KeyNote; onSuggestion: (q: strin
   );
 }
 
-/** A single chat bubble (user right, assistant left with source chips). */
 function Bubble({ msg }: { msg: ChatMessage }) {
   if (msg.role === 'user') {
     return (
@@ -338,7 +314,7 @@ function Bubble({ msg }: { msg: ChatMessage }) {
         {msg.pending ? (
           <span className="flex items-center gap-2 text-sky-200">
             <span className="h-2 w-2 animate-ping rounded-full bg-sky-400" />
-            Searching Work IQ…
+            Searching Work IQ...
           </span>
         ) : (
           <>
@@ -346,15 +322,7 @@ function Bubble({ msg }: { msg: ChatMessage }) {
             {msg.sources && msg.sources.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {msg.sources.map((source) => (
-                  <button
-                    key={source.url}
-                    type="button"
-                    title={`Open: ${source.url}`}
-                    onClick={() => bridge.openExternal(source.url)}
-                    className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300 transition hover:border-sky-400/40 hover:bg-white/10 hover:text-sky-300"
-                  >
-                    {SOURCE_ICON[source.kind]} {source.title}
-                  </button>
+                  <SourceChip key={source.url} source={source} />
                 ))}
               </div>
             )}
@@ -362,5 +330,19 @@ function Bubble({ msg }: { msg: ChatMessage }) {
         )}
       </div>
     </div>
+  );
+}
+
+function SourceChip({ source }: { source: WorkIqSource }) {
+  return (
+    <button
+      type="button"
+      title={`Open: ${source.url}`}
+      onClick={() => bridge.openExternal(source.url)}
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300 transition hover:border-sky-400/40 hover:bg-white/10 hover:text-sky-300"
+    >
+      <span className="text-[11px] leading-none" aria-hidden="true">{SOURCE_ICON[source.kind]}</span>
+      <span className="max-w-[14rem] truncate">{source.title}</span>
+    </button>
   );
 }

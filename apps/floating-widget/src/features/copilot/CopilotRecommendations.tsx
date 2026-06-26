@@ -3,13 +3,7 @@ import Markdown from 'react-markdown';
 import { bridge } from '@/shared/bridge';
 import { useCopilot } from './useCopilot';
 
-/**
- * Wolf Tactic panel — the real-time coaching nudge (the exact line to say).
- *
- * The grounded Q&A moved into the Conversation panel's chat, so this surface is
- * now just the latest tactic, plus a small button to force a fresh one
- * (compile memory + generate) on demand.
- */
+// Shows the latest coachable line only; grounded Q&A lives in the Conversation panel.
 export function CopilotRecommendations() {
   const { tactic } = useCopilot();
 
@@ -20,10 +14,10 @@ export function CopilotRecommendations() {
 
   if (!tactic) {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 px-4 py-2 text-xs italic text-slate-500">
+      <div className="glass-surface flex items-center justify-between gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs text-slate-400">
         <span className="flex items-center gap-2">
-          <span aria-hidden="true">🐺</span>
-          Wolf Tactics appear here while you’re listening.
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-300/80" />
+          Next move appears while listening.
         </span>
         <GenerateButton onClick={generate} />
       </div>
@@ -35,15 +29,14 @@ export function CopilotRecommendations() {
       key={tactic.ts}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-surface relative overflow-hidden rounded-2xl border border-amber-400/40 px-4 py-3 text-amber-100"
+      className="glass-surface relative overflow-hidden rounded-xl border border-emerald-300/30 px-4 py-3 text-slate-100 shadow-[0_18px_44px_rgba(2,6,23,0.22)]"
     >
-      {/* Amber tint layered over the (solid or glass) surface so the box stays
-          opaque in solid mode instead of letting the desktop show through. */}
-      <span className="pointer-events-none absolute inset-0 bg-amber-400/10" aria-hidden="true" />
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-400/12 via-cyan-300/8 to-transparent" aria-hidden="true" />
       <div className="relative">
         <div className="mb-1 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-            <span aria-hidden="true">🐺</span> Wolf Tactic
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+            Next Move
           </div>
           <GenerateButton onClick={generate} />
         </div>
@@ -55,15 +48,14 @@ export function CopilotRecommendations() {
   );
 }
 
-/** Tiny lightning button to force a fresh tactic (compile memory + generate). */
 function GenerateButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title="Generate a fresh Wolf Tactic"
-      aria-label="Generate a fresh Wolf Tactic"
-      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-amber-400/30 text-amber-300/80 transition hover:bg-amber-400/15 hover:text-amber-100"
+      title="Refresh next move"
+      aria-label="Refresh next move"
+      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-emerald-300/30 text-emerald-200/80 transition hover:bg-emerald-300/15 hover:text-emerald-100"
     >
       <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10" />

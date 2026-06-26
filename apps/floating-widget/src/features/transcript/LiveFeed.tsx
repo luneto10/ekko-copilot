@@ -3,11 +3,6 @@ import type { SpeakerId } from '@workiq/types';
 import { SPEAKER_COLOR, SPEAKER_LABEL } from '@/shared/theme';
 import { useTranscript } from './useTranscript';
 
-/**
- * Compact live-transcript strip — a small, scrollable confirmation that both
- * voices are being captured. Auto-scrolls to the newest line, scrolling only
- * its own container so it never disturbs the window/dock.
- */
 export function LiveFeed() {
   const { finals, interims } = useTranscript();
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -33,7 +28,7 @@ export function LiveFeed() {
         className="max-h-20 space-y-1 overflow-y-auto px-3 py-2 text-xs leading-snug"
       >
         {finals.length === 0 && interimEntries.length === 0 && (
-          <p className="italic text-slate-500">Waiting for the conversation…</p>
+          <p className="italic text-slate-500">Waiting for the conversation...</p>
         )}
         {finals.map((segment, index) => (
           <p key={`${segment.ts}-${index}`}>

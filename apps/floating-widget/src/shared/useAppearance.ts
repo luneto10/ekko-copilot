@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** Colour palette of the widget. */
 export type ThemeMode = 'dark' | 'light';
-/** Whether panels are see-through ("glass") or fully opaque. */
 export type SurfaceMode = 'transparent' | 'solid';
 
 const THEME_KEY = 'workiq:theme';
@@ -13,12 +11,6 @@ function read<T extends string>(key: string, fallback: T, valid: readonly T[]): 
   return stored && (valid as readonly string[]).includes(stored) ? (stored as T) : fallback;
 }
 
-/**
- * Persisted appearance preferences (theme + surface).
- *
- * Returns the current values, setters, and the root class string to apply so
- * the CSS variables in `globals.css` re-skin every `.glass-surface` at once.
- */
 export function useAppearance() {
   const [theme, setTheme] = useState<ThemeMode>(() =>
     read(THEME_KEY, 'dark', ['dark', 'light']),

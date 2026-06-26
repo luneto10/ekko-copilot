@@ -4,29 +4,13 @@ import { debug } from '../debug/DebugBus';
 import { KEYPOINT_SYSTEM } from './prompts';
 import { IntentDetector } from './IntentDetector';
 
-/** A groundable point the customer raised, named freely (not from a fixed list). */
 export interface DetectedKeyPoint {
-  /** Short, free-form label, e.g. "Pricing", "Data Residency". */
   topic: string;
-  /** Concise search query for Work IQ. */
   query: string;
 }
 
-/**
- * Decides which lines in the call are "key points" worth grounding.
- *
- * This is the seam for swapping detection strategies: the orchestrator depends
- * only on this interface, so the AI implementation can be replaced (or A/B'd)
- * without touching the pipeline.
- */
 export interface KeyPointDetector {
-  /** Implementation name, for debug gauges. */
   readonly name: string;
-  /**
-   * Returns a key point to ground, or `null` to ignore the utterance.
-   * `knownTopics` lets the detector REUSE an existing topic label so related
-   * questions collapse onto one key note instead of spawning near-duplicates.
-   */
   detect(
     utterance: string,
     context: string,
@@ -34,13 +18,8 @@ export interface KeyPointDetector {
   ): Promise<DetectedKeyPoint | null>;
 }
 
-/** Ignore very short utterances (greetings, "ok", "yeah") before calling the LLM. */
 const MIN_WORDS = 4;
 
-/**
- * AI-driven detector: the model decides, per utterance, whether a groundable
- * key point was raised and names the topic itself — no predefined intents.
- */
 class AiKeyPointDetector implements KeyPointDetector {
   readonly name = 'ai';
 
@@ -73,22 +52,10 @@ class AiKeyPointDetector implements KeyPointDetector {
     });
 
     const raw = completion.choices[0]?.message?.content?.trim();
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw) as { isKeyPoint?: boolean; topic?: string; query?: string };
-      if (!parsed.isKeyPoint || !parsed.topic?.trim() || !parsed.query?.trim()) return null;
-      return { topic: parsed.topic.trim(), query: parsed.query.trim() };
-    } catch {
-      debug.warn('intent', 'key-point JSON parse failed', { raw });
-      return null;
-    }
+    return parseKeyPoint(raw);
   }
 }
 
-/**
- * Keyword fallback used when Azure OpenAI isn't configured, so the app still
- * surfaces key notes offline. Reuses the legacy intent keywords as the topic.
- */
 class KeywordKeyPointDetector implements KeyPointDetector {
   readonly name = 'keyword';
   private readonly intents = new IntentDetector();
@@ -99,7 +66,6 @@ class KeywordKeyPointDetector implements KeyPointDetector {
   }
 }
 
-/** Pick the AI detector when OpenAI is configured, else the keyword fallback. */
 export function createKeyPointDetector(): KeyPointDetector {
   if (isOpenAiConfigured()) {
     debug.gauge('keypoint.detector', 'ai');
@@ -114,4 +80,16 @@ export function createKeyPointDetector(): KeyPointDetector {
   }
   debug.gauge('keypoint.detector', 'keyword');
   return new KeywordKeyPointDetector();
+}
+
+function parseKeyPoint(raw: string | undefined): DetectedKeyPoint | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { isKeyPoint?: boolean; topic?: string; query?: string };
+    if (!parsed.isKeyPoint || !parsed.topic?.trim() || !parsed.query?.trim()) return null;
+    return { topic: parsed.topic.trim(), query: parsed.query.trim() };
+  } catch {
+    debug.warn('intent', 'key-point JSON parse failed', { raw });
+    return null;
+  }
 }

@@ -46,6 +46,7 @@ apps/floating-widget/src/
 │
 ├── shared/                   # cross-feature building blocks (import via @/shared/…)
 │   ├── bridge.ts             # `bridge` = typed window.workiq (single IPC entry point)
+│   ├── electron.ts           # shared Electron drag-region style constants
 │   ├── workiq.d.ts           # the window.workiq contract (keep in sync w/ preload)
 │   ├── theme.ts              # SPEAKER_COLOR / LABEL, SOURCE_ICON, GLASS_SURFACE
 │   └── ui/
@@ -63,7 +64,7 @@ apps/floating-widget/src/
     │   ├── useMemory.ts
     │   ├── CallIntelligence.tsx
     │   └── index.ts          # → memoryPanel
-    ├── copilot/              # "Copilot · Work IQ" panel (Work IQ + Wolf Tactic)
+    ├── copilot/              # "Next Move" coaching panel
     │   ├── useCopilot.ts
     │   ├── CopilotRecommendations.tsx
     │   └── index.ts          # → copilotPanel
@@ -83,7 +84,7 @@ always import with stable paths like `@/shared/bridge`, never `../../../shared/�
 | Capture | `features/capture` | no (header) | sends `sendChunk` | Mic + loopback → PCM → main |
 | Transcript | `features/transcript` | `transcriptPanel` | `onTranscript` | Live Feed by speaker |
 | Memory | `features/memory` | `memoryPanel` | `onMemory` | Call Intelligence (memory.md) |
-| Copilot | `features/copilot` | `copilotPanel` | `onWorkIqStatus/Result`, `onTactic` | Grounded answers + Wolf Tactic |
+| Copilot | `features/copilot` | `copilotPanel` | `onTactic` | Next-move coaching |
 | Dev Tools | `features/devtools` | n/a (own window) | `onDebug*`, `send/forceX` | Inspector + transcript injector |
 
 ---

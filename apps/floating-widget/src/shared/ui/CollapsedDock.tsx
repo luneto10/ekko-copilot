@@ -1,28 +1,13 @@
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRef } from 'react';
 import { bridge } from '@/shared/bridge';
-
-/** Keep the buttons out of the drag gesture. */
-const NO_DRAG: CSSProperties = { WebkitAppRegion: 'no-drag' };
+import { NO_DRAG_REGION } from '@/shared/electron';
 
 interface CollapsedDockProps {
-  /** Whether audio capture is currently running. */
   isListening: boolean;
-  /** Toggle capture (the play/stop button). */
   onToggle: () => void;
-  /** Restore the full widget. */
   onExpand: () => void;
 }
-
-/**
- * The collapsed state: a small circular dock pinned to the right edge of the
- * screen. It carries the essentials while hidden — a play/stop control plus an
- * expand button.
- *
- * Dragging is handled manually (not via Electron's window-drag region) so the
- * dock can only slide vertically: each pointer move sends the Y delta to the
- * main process, which keeps the window pinned to the right edge.
- */
 export function CollapsedDock({ isListening, onToggle, onExpand }: CollapsedDockProps) {
   const lastY = useRef<number | null>(null);
 
@@ -53,7 +38,7 @@ export function CollapsedDock({ isListening, onToggle, onExpand }: CollapsedDock
         {/* Expand tab: a small tab on the left holding the chevron. */}
         <button
           type="button"
-          style={NO_DRAG}
+          style={NO_DRAG_REGION}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onExpand}
           title="Open WorkIQ"
@@ -75,8 +60,6 @@ export function CollapsedDock({ isListening, onToggle, onExpand }: CollapsedDock
           </svg>
         </button>
 
-        {/* The rounded-square dock body — also the drag surface. A small pulse
-            glows around it while recording. */}
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -85,11 +68,9 @@ export function CollapsedDock({ isListening, onToggle, onExpand }: CollapsedDock
           title="Drag to move up or down"
           className="glass-surface dock-hover-solid relative z-10 flex h-14 w-14 cursor-grab items-center justify-center rounded-2xl border border-white/10 shadow-2xl active:cursor-grabbing"
         >
-          {/* Record toggle: a small red circle when idle, growing into a red
-              square while recording. */}
           <button
             type="button"
-            style={NO_DRAG}
+            style={NO_DRAG_REGION}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={onToggle}
             title={isListening ? 'Stop recording' : 'Start recording'}

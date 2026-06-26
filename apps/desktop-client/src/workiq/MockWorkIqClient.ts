@@ -14,7 +14,7 @@ const CANNED: Record<SalesIntent, CannedAnswer> = {
       'Standard tier is $32/user/mo; Enterprise is $58/user/mo with volume breaks at 250+ seats. Annual prepay earns a 15% reduction. A custom quote for ~400 seats was drafted last quarter.',
     sources: [
       { title: 'Pricing & Packaging FY26.xlsx', url: 'https://contoso.sharepoint.com/sites/sales/pricing', kind: 'sharepoint' },
-      { title: 'Re: Enterprise quote — 400 seats', url: 'https://outlook.office.com/mail/quote-400', kind: 'email' },
+      { title: 'Re: Enterprise quote - 400 seats', url: 'https://outlook.office.com/mail/quote-400', kind: 'email' },
     ],
   },
   security: {
@@ -59,27 +59,24 @@ const CANNED: Record<SalesIntent, CannedAnswer> = {
     answer:
       'Versus the incumbent: we win on time-to-value (2 weeks vs ~3 months) and native Teams integration. Their advantage is a larger marketplace. Lead with the embedded workflow story.',
     sources: [
-      { title: 'Competitive Battlecard — Us vs Acme.pptx', url: 'https://contoso.sharepoint.com/sites/sales/battlecards', kind: 'sharepoint' },
+      { title: 'Competitive Battlecard - Us vs Acme.pptx', url: 'https://contoso.sharepoint.com/sites/sales/battlecards', kind: 'sharepoint' },
     ],
   },
   discount: {
     answer:
-      'Up to 15% is rep-approved with annual prepay; 16–25% needs director sign-off and a 24-month term. Avoid leading with price — anchor on the ROI model first.',
+      'Up to 15% is rep-approved with annual prepay; 16-25% needs director sign-off and a 24-month term. If the customer asks price, answer it directly before discussing ROI.',
     sources: [
       { title: 'Discount Approval Matrix.xlsx', url: 'https://contoso.sharepoint.com/sites/sales/discounts', kind: 'sharepoint' },
     ],
   },
 };
 
-/** Generic grounding for free-form topics the canned set doesn't cover. */
 const GENERIC_SOURCES: WorkIqSource[] = [
-  { title: 'Account Notes — Contoso.docx', url: 'https://contoso.sharepoint.com/sites/sales/notes', kind: 'sharepoint' },
+  { title: 'Account Notes - Contoso.docx', url: 'https://contoso.sharepoint.com/sites/sales/notes', kind: 'sharepoint' },
   { title: 'Re: Follow-up from discovery call', url: 'https://outlook.office.com/mail/discovery', kind: 'email' },
 ];
 
-/** Simulated Work IQ grounding with realistic enterprise latency (1.5–3s). */
 export class MockWorkIqClient implements WorkIqClient {
-  /** Maps a free-form AI topic (or the raw query) onto a canned intent, if any. */
   private readonly detector = new IntentDetector();
 
   async query(text: string, topic: string): Promise<WorkIqResponse> {
@@ -92,8 +89,6 @@ export class MockWorkIqClient implements WorkIqClient {
       return { query: text, answer: canned.answer, sources: canned.sources, topic };
     }
 
-    // Novel topic the AI named that we have no canned answer for — still ground
-    // it plausibly so the demo flows for any conversation.
     return {
       query: text,
       answer:

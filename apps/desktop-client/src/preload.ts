@@ -19,14 +19,12 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
   return () => ipcRenderer.removeListener(channel, listener);
 }
 
-// The ONLY surface exposed to the renderer. No Azure keys ever cross this bridge.
 contextBridge.exposeInMainWorld('workiq', {
   startAudio: () => ipcRenderer.send(IPC.AudioStart),
   stopAudio: () => ipcRenderer.send(IPC.AudioStop),
   sendChunk: (source: AudioSource, buffer: ArrayBuffer) =>
     ipcRenderer.send(IPC.AudioChunk, { source, buffer }),
 
-  // --- Window controls ---
   collapseWindow: () => ipcRenderer.send(IPC.WindowCollapse),
   expandWindow: () => ipcRenderer.send(IPC.WindowExpand),
   moveDock: (dy: number) => ipcRenderer.send(IPC.WindowDockMove, dy),
@@ -42,7 +40,6 @@ contextBridge.exposeInMainWorld('workiq', {
   onWorkIqResult: (cb: (result: WorkIqResponse) => void) => subscribe(IPC.WorkIqResult, cb),
   onTactic: (cb: (tactic: CopilotTactic) => void) => subscribe(IPC.CopilotTactic, cb),
 
-  // --- Dev Inspector (dev-only second window) ---
   onDebugInit: (cb: (snapshot: DebugSnapshot) => void) => subscribe(IPC.DebugInit, cb),
   onDebugEvent: (cb: (event: DebugEvent) => void) => subscribe(IPC.DebugEvent, cb),
   onDebugMetrics: (cb: (metrics: DebugMetrics) => void) => subscribe(IPC.DebugMetrics, cb),
