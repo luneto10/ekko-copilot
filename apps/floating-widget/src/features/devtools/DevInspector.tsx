@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Markdown from 'react-markdown';
 import type { DebugEvent, DebugLevel, DebugMetrics, SpeakerId } from '@workiq/types';
 import { bridge } from '@/shared/bridge';
 import { StatusPill } from '@/shared/ui/StatusPill';
@@ -74,6 +75,7 @@ export function DevInspector() {
   const [activeLevels, setActiveLevels] = useState<Set<DebugLevel>>(new Set(LEVELS));
   const [speaker, setSpeaker] = useState<SpeakerId>('Speaker_2');
   const [injectText, setInjectText] = useState('');
+  const [tab, setTab] = useState<'log' | 'memory'>('log');
 
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
@@ -240,51 +242,68 @@ export function DevInspector() {
         </span>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2 text-[11px]">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="filter…"
-          className="w-40 rounded-md border border-white/10 bg-slate-900 px-2 py-1 outline-none focus:border-sky-500/50"
-        />
-        {LEVELS.map((lvl) => (
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-white/10 px-4 py-1.5 text-[11px]">
+        {(['log', 'memory'] as const).map((t) => (
           <button
-            key={lvl}
-            onClick={() => toggleLevel(lvl)}
-            className={`rounded-full border px-2 py-0.5 capitalize ${
-              activeLevels.has(lvl) ? LEVEL_STYLE[lvl] : 'border-white/10 text-slate-600'
+            key={t}
+            onClick={() => setTab(t)}
+            className={`rounded-md px-3 py-1 font-medium transition ${
+              tab === t ? 'bg-white/10 text-slate-100' : 'text-slate-400 hover:bg-white/5'
             }`}
           >
-            {lvl}
+            {t === 'log' ? 'Event Log' : 'Compiled Memory'}
           </button>
         ))}
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-slate-500">
-            {filtered.length}/{events.length}
-          </span>
-          <button
-            onClick={() => setPaused((p) => !p)}
-            className={`rounded-md border px-2 py-0.5 ${
-              paused ? 'border-amber-500/40 bg-amber-500/15 text-amber-200' : 'border-white/10 text-slate-300'
-            }`}
-          >
-            {paused ? 'Paused' : 'Live'}
-          </button>
-          <button
-            onClick={() => {
-              bridge.clearDebug();
-              setEvents([]);
-            }}
-            className="rounded-md border border-white/10 px-2 py-0.5 text-slate-300 hover:bg-white/5"
-          >
-            Clear
-          </button>
-        </div>
       </div>
 
-      {/* Body: log + memory */}
-      <div className="flex min-h-0 flex-1">
+      {/* Filters (log only) */}
+      {tab === 'log' && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-2 text-[11px]">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="filter…"
+            className="w-40 rounded-md border border-white/10 bg-slate-900 px-2 py-1 outline-none focus:border-sky-500/50"
+          />
+          {LEVELS.map((lvl) => (
+            <button
+              key={lvl}
+              onClick={() => toggleLevel(lvl)}
+              className={`rounded-full border px-2 py-0.5 capitalize ${
+                activeLevels.has(lvl) ? LEVEL_STYLE[lvl] : 'border-white/10 text-slate-600'
+              }`}
+            >
+              {lvl}
+            </button>
+          ))}
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-slate-500">
+              {filtered.length}/{events.length}
+            </span>
+            <button
+              onClick={() => setPaused((p) => !p)}
+              className={`rounded-md border px-2 py-0.5 ${
+                paused ? 'border-amber-500/40 bg-amber-500/15 text-amber-200' : 'border-white/10 text-slate-300'
+              }`}
+            >
+              {paused ? 'Paused' : 'Live'}
+            </button>
+            <button
+              onClick={() => {
+                bridge.clearDebug();
+                setEvents([]);
+              }}
+              className="rounded-md border border-white/10 px-2 py-0.5 text-slate-300 hover:bg-white/5"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Body: event log OR compiled memory */}
+      {tab === 'log' ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2 font-mono text-[11px] leading-relaxed">
           {filtered.length === 0 && <p className="italic text-slate-600">No events match.</p>}
           {filtered.slice(-400).map((e) => (
@@ -307,16 +326,28 @@ export function DevInspector() {
           ))}
           <div ref={logEndRef} />
         </div>
-
-        <aside className="hidden w-80 shrink-0 flex-col border-l border-white/10 lg:flex">
-          <h2 className="border-b border-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-            Live memory.md
-          </h2>
-          <pre className="flex-1 overflow-auto whitespace-pre-wrap px-3 py-2 text-[11px] text-slate-300">
-            {latestMemory || '— no memory compiled yet —'}
-          </pre>
-        </aside>
-      </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] uppercase tracking-widest text-slate-500">
+              Live memory.md
+            </span>
+            <button
+              onClick={() => bridge.forceMemoryCompile()}
+              className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200 hover:bg-amber-500/20"
+            >
+              Compile now
+            </button>
+          </div>
+          {latestMemory ? (
+            <div className="prose-copilot max-w-2xl text-sm text-slate-200">
+              <Markdown>{latestMemory}</Markdown>
+            </div>
+          ) : (
+            <p className="italic text-slate-600">— no memory compiled yet —</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

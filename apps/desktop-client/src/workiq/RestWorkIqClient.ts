@@ -11,8 +11,7 @@ interface WorkIqApiResponse {
 /**
  * Real Microsoft Work IQ REST client. Non-blocking POST authenticated with an
  * Azure Entra ID bearer token. Swapped in via WORKIQ_MODE=real. The token here
- * is a placeholder env var; replace getBearerToken() with @azure/identity
- * (e.g. ClientSecretCredential / DefaultAzureCredential) for production.
+ * is a placeholder env var; replace getBearerToken() with @azure/identity for production.
  */
 export class RestWorkIqClient implements WorkIqClient {
   private async getBearerToken(): Promise<string> {

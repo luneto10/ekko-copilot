@@ -38,8 +38,15 @@ export class MemoryCompiler {
     return completion.choices[0]?.message?.content?.trim() || currentMarkdown;
   }
 
-  async tactic(memoryMarkdown: string, recentExchanges: string): Promise<string> {
+  async tactic(
+    memoryMarkdown: string,
+    recentExchanges: string,
+    groundedFacts = '',
+  ): Promise<string> {
     if (!this.client) return '';
+    const grounded = groundedFacts.trim()
+      ? `\n\nGROUNDED FACTS from the rep's documents (the ONLY source for numbers/specifics):\n${groundedFacts}`
+      : '';
     const completion = await this.client.chat.completions.create({
       model: env.openAiDeployment,
       temperature: 0.5,
@@ -48,7 +55,7 @@ export class MemoryCompiler {
         { role: 'system', content: TACTIC_SYSTEM },
         {
           role: 'user',
-          content: `CRM memory:\n${memoryMarkdown}\n\nMost recent exchanges:\n${recentExchanges}\n\nGive ONE next-move tactic.`,
+          content: `CRM memory:\n${memoryMarkdown}${grounded}\n\nMost recent exchanges:\n${recentExchanges}\n\nGive ONE next-move tactic.`,
         },
       ],
     });

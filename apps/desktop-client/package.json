@@ -7,9 +7,12 @@
   "scripts": {
     "dev": "tsup && electron .",
     "build": "tsup",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:workiq": "tsx src/workiq/testGraph.ts",
+    "samples:upload": "tsx src/workiq/uploadSamples.ts"
   },
   "dependencies": {
+    "@azure/msal-node": "^5.3.0",
     "dotenv": "^16.4.5",
     "microsoft-cognitiveservices-speech-sdk": "^1.41.0",
     "openai": "^4.67.3"
@@ -19,6 +22,7 @@
     "@workiq/types": "*",
     "electron": "^33.2.0",
     "tsup": "^8.3.5",
+    "tsx": "^4.22.4",
     "typescript": "^5.6.3"
   }
 }

@@ -31,6 +31,9 @@ contextBridge.exposeInMainWorld('workiq', {
   expandWindow: () => ipcRenderer.send(IPC.WindowExpand),
   moveDock: (dy: number) => ipcRenderer.send(IPC.WindowDockMove, dy),
   resetWindow: () => ipcRenderer.send(IPC.WindowReset),
+  openExternal: (url: string) => ipcRenderer.send(IPC.ShellOpenExternal, url),
+  askChat: (question: string, topic: string) =>
+    ipcRenderer.invoke(IPC.ChatAsk, { question, topic }),
 
   onTranscript: (cb: (segment: TranscriptSegment) => void) =>
     subscribe(IPC.TranscriptSegment, cb),

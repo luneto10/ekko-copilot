@@ -4,6 +4,7 @@ import {
   type IpcChannel,
   type SpeakerId,
   type TranscriptSegment,
+  type WorkIqResponse,
 } from '@workiq/types';
 import { SourceRecognizer } from '../speech/SourceRecognizer';
 import { isSpeechConfigured, env } from '../env';
@@ -16,7 +17,6 @@ import { debug } from '../debug/DebugBus';
 
 type Emit = (channel: IpcChannel, payload: unknown) => void;
 
-const TACTIC_INTERVAL_MS = 60_000;
 const HISTORY_LIMIT = 40;
 
 interface OrchestratorOptions {
@@ -38,13 +38,16 @@ export class Orchestrator {
 
   private micRecognizer: SourceRecognizer | null = null;
   private systemRecognizer: SourceRecognizer | null = null;
-  private tacticTimer: NodeJS.Timeout | null = null;
-  /** Whether the rep is actively listening; gates real-time tactic nudges. */
+  /** Whether the rep is actively listening (informational; tactics are event-driven). */
   private active = false;
 
   private memoryMarkdown = INITIAL_MEMORY;
   private history: TranscriptSegment[] = [];
   private compiling = false;
+  /** Topics already raised this call, fed to the detector so it reuses labels. */
+  private readonly knownTopics: string[] = [];
+  /** Latest grounded Work IQ answer per topic, fed to tactics so they cite real facts. */
+  private readonly groundedFacts = new Map<string, string>();
   private readonly flushWords = env.memoryFlushWords;
 
   constructor({ emit }: OrchestratorOptions) {
@@ -62,12 +65,10 @@ export class Orchestrator {
     debug.gauge('workiq.client', this.workIq.constructor.name);
     debug.gauge('memory.flushWords', this.flushWords);
     debug.event('orchestrator', `started (speech ${isSpeechConfigured() ? 'on' : 'off'})`);
-    this.tacticTimer = setInterval(() => void this.generateTactic(), TACTIC_INTERVAL_MS);
     this.emit(IPC.MemoryUpdate, { markdown: this.memoryMarkdown, updatedAt: Date.now() });
   }
 
   stop(): void {
-    if (this.tacticTimer) clearInterval(this.tacticTimer);
     this.micRecognizer?.close();
     this.systemRecognizer?.close();
   }
@@ -85,6 +86,15 @@ export class Orchestrator {
   pushAudio(source: AudioSource, buffer: ArrayBuffer): void {
     if (source === 'mic') this.micRecognizer?.write(buffer);
     else this.systemRecognizer?.write(buffer);
+  }
+
+  /**
+   * Answer a free-form follow-up question through the SAME Work IQ client that
+   * grounds key notes, so per-pill chat uses real data (Copilot Retrieval /
+   * Search) instead of a separate mock.
+   */
+  async ask(question: string, topic: string): Promise<WorkIqResponse> {
+    return this.workIq.query(question, topic);
   }
 
   private handleSegment(segment: TranscriptSegment): void {
@@ -125,6 +135,9 @@ export class Orchestrator {
       debug.gauge('memory.lastMs', ms);
       debug.event('memory', `compiled in ${ms}ms`, { markdown: this.memoryMarkdown });
       this.emit(IPC.MemoryUpdate, { markdown: this.memoryMarkdown, updatedAt: Date.now() });
+      // A fresh memory = a fresh, smarter tactic. Event-driven (not on a timer),
+      // so tactics only appear on new conversation and stop when it ends.
+      void this.generateTactic();
     } catch (err) {
       debug.error('memory', 'compile failed', { error: String(err) });
     } finally {
@@ -143,6 +156,12 @@ export class Orchestrator {
       debug.gauge('workiq.lastMs', ms);
       debug.event('workiq', `result in ${ms}ms`, { answer: result.answer, sources: result.sources });
       this.emit(IPC.WorkIqResult, { ...result, topic });
+      // Grounding just landed: cache the fact and refresh the tactic so it can
+      // cite the real number instead of inventing one.
+      if (result.answer.trim()) {
+        this.groundedFacts.set(topic, result.answer.trim());
+        void this.generateTactic();
+      }
     } catch (err) {
       debug.error('workiq', 'query failed', { error: String(err) });
     } finally {
@@ -162,26 +181,38 @@ export class Orchestrator {
       .join('\n');
     let point: DetectedKeyPoint | null;
     try {
-      point = await this.keyPointDetector.detect(utterance, context);
+      point = await this.keyPointDetector.detect(utterance, context, this.knownTopics);
     } catch (err) {
       debug.error('intent', 'key-point detection failed', { error: String(err) });
       return;
     }
     if (!point) return;
+    if (!this.knownTopics.some((t) => t.toLowerCase() === point.topic.toLowerCase())) {
+      this.knownTopics.push(point.topic);
+    }
     debug.count('intents');
     debug.event('intent', `Key point: ${point.topic}`, { topic: point.topic, query: point.query });
     void this.runWorkIq(point.topic, point.query);
+
+    // A customer key point is a coaching moment: refresh memory now (which also
+    // emits a fresh tactic) instead of waiting for the word threshold.
+    if (!this.compiling && !this.buffer.isEmpty()) {
+      void this.compileMemory(this.buffer.flush());
+    }
   }
 
-  private async generateTactic(force = false): Promise<void> {
-    if (!force && !this.active) return;
+  private async generateTactic(): Promise<void> {
     if (this.history.length === 0) return;
     const recent = this.history
       .slice(-8)
       .map((s) => `${s.speakerLabel}: ${s.text}`)
       .join('\n');
     try {
-      const text = await this.memoryCompiler.tactic(this.memoryMarkdown, recent);
+      const text = await this.memoryCompiler.tactic(
+        this.memoryMarkdown,
+        recent,
+        this.recentGroundedFacts(),
+      );
       if (text) {
         debug.count('tactics');
         debug.event('tactic', text);
@@ -190,6 +221,14 @@ export class Orchestrator {
     } catch (err) {
       debug.error('tactic', 'generation failed', { error: String(err) });
     }
+  }
+
+  /** Compact, most-recent grounded facts to anchor tactics in real data. */
+  private recentGroundedFacts(): string {
+    return [...this.groundedFacts.entries()]
+      .slice(-4)
+      .map(([topic, answer]) => `- ${topic}: ${answer}`)
+      .join('\n');
   }
 
   /**
@@ -219,6 +258,6 @@ export class Orchestrator {
   /** Dev Inspector: generate a sales tactic immediately. */
   forceTactic(): void {
     debug.event('tactic', 'force generate (manual)');
-    void this.generateTactic(true);
+    void this.generateTactic();
   }
 }

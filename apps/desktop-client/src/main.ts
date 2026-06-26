@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { app, BrowserWindow, desktopCapturer, ipcMain, screen, session } from 'electron';
+import { app, BrowserWindow, desktopCapturer, ipcMain, screen, session, shell } from 'electron';
 import { IPC, type AudioChunkPayload, type TestTranscriptPayload } from '@workiq/types';
 import { isSpeechConfigured, isOpenAiConfigured, env } from './env';
 import { Orchestrator } from './orchestrator/Orchestrator';
@@ -200,6 +200,23 @@ function registerIpc(): void {
   ipcMain.on(IPC.WindowExpand, () => expandWidget());
   ipcMain.on(IPC.WindowDockMove, (_event, dy: number) => moveDock(dy));
   ipcMain.on(IPC.WindowReset, () => resetWindow());
+  ipcMain.on(IPC.ShellOpenExternal, (_event, url: string) => {
+    // Only allow real web links to be opened externally.
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
+    // SharePoint/OneDrive serves direct file URLs as a DOWNLOAD; `?web=1` opens
+    // them in the browser viewer instead.
+    const isSharePoint = /\.sharepoint\.com/i.test(url);
+    const target = isSharePoint && !url.includes('?') ? `${url}?web=1` : url;
+    void shell.openExternal(target);
+  });
+  ipcMain.handle(
+    IPC.ChatAsk,
+    async (_event, payload: { question: string; topic: string }) => {
+      if (!orchestrator) return { answer: '', sources: [] };
+      const result = await orchestrator.ask(payload.question, payload.topic ?? '');
+      return { answer: result.answer, sources: result.sources };
+    },
+  );
 
   ipcMain.on(IPC.DebugTestTranscript, (_event, payload: TestTranscriptPayload) => {
     orchestrator?.injectTranscript(payload.speaker, payload.text);

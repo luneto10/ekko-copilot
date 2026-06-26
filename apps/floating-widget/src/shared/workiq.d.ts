@@ -8,6 +8,7 @@ import type {
   SpeakerId,
   TranscriptSegment,
   WorkIqResponse,
+  WorkIqSource,
   WorkIqStatus,
 } from '@workiq/types';
 
@@ -46,6 +47,10 @@ declare global {
       moveDock(dy: number): void;
       /** Dev: force the window back to its default size and re-center it. */
       resetWindow(): void;
+      /** Open a web URL (e.g. a source document) in the default browser. */
+      openExternal(url: string): void;
+      /** Ask a follow-up question, grounded by the real Work IQ client. */
+      askChat(question: string, topic: string): Promise<{ answer: string; sources: WorkIqSource[] }>;
 
       // --- main -> renderer event streams (each returns an unsubscribe fn) ---
       onTranscript(cb: (segment: TranscriptSegment) => void): () => void;

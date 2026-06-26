@@ -22,8 +22,16 @@ export interface DetectedKeyPoint {
 export interface KeyPointDetector {
   /** Implementation name, for debug gauges. */
   readonly name: string;
-  /** Returns a key point to ground, or `null` to ignore the utterance. */
-  detect(utterance: string, context: string): Promise<DetectedKeyPoint | null>;
+  /**
+   * Returns a key point to ground, or `null` to ignore the utterance.
+   * `knownTopics` lets the detector REUSE an existing topic label so related
+   * questions collapse onto one key note instead of spawning near-duplicates.
+   */
+  detect(
+    utterance: string,
+    context: string,
+    knownTopics: string[],
+  ): Promise<DetectedKeyPoint | null>;
 }
 
 /** Ignore very short utterances (greetings, "ok", "yeah") before calling the LLM. */
@@ -38,8 +46,17 @@ class AiKeyPointDetector implements KeyPointDetector {
 
   constructor(private readonly client: AzureOpenAI) {}
 
-  async detect(utterance: string, context: string): Promise<DetectedKeyPoint | null> {
+  async detect(
+    utterance: string,
+    context: string,
+    knownTopics: string[],
+  ): Promise<DetectedKeyPoint | null> {
     if (utterance.trim().split(/\s+/).length < MIN_WORDS) return null;
+
+    const existing = knownTopics.length
+      ? `EXISTING topics already on the board: ${knownTopics.map((t) => `"${t}"`).join(', ')}.\n` +
+        'If this point is about one of them, REUSE that exact label as the topic.\n\n'
+      : '';
 
     const completion = await this.client.chat.completions.create({
       model: env.openAiDeployment,
@@ -50,7 +67,7 @@ class AiKeyPointDetector implements KeyPointDetector {
         { role: 'system', content: KEYPOINT_SYSTEM },
         {
           role: 'user',
-          content: `CONTEXT (recent lines):\n${context || '(none)'}\n\nLATEST customer line:\n${utterance}\n\nReturn the JSON.`,
+          content: `${existing}CONTEXT (recent lines):\n${context || '(none)'}\n\nLATEST customer line:\n${utterance}\n\nReturn the JSON.`,
         },
       ],
     });

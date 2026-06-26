@@ -108,6 +108,10 @@ export const IPC = {
   WindowExpand: 'window:expand',
   WindowDockMove: 'window:dock-move',
   WindowReset: 'window:reset',
+  // shell (renderer -> main)
+  ShellOpenExternal: 'shell:open-external',
+  // chat (renderer <-> main, request/response)
+  ChatAsk: 'chat:ask',
   // main -> renderer
   TranscriptSegment: 'transcript:segment',
   MemoryUpdate: 'memory:update',

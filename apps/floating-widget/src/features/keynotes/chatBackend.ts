@@ -1,6 +1,7 @@
 import type { WorkIqSource } from '@workiq/types';
 import type { KeyNote } from './types';
 import { mockFollowUp } from './mockChat';
+import { bridge } from '@/shared/bridge';
 
 /** A grounded answer to a follow-up question inside a key note's chat. */
 export interface ChatAnswer {
@@ -11,16 +12,24 @@ export interface ChatAnswer {
 /**
  * The seam for the per-note chatbot.
  *
- * `useConversation` depends ONLY on this interface, so swapping the mock for a
- * real backend (Azure OpenAI + Work IQ) is a one-line change here — e.g. point
- * `chatBackend` at an implementation that calls the main process over IPC
- * (`bridge.askChat(...)`). Nothing in the UI has to change.
+ * Default: route follow-ups through the main process (`bridge.askChat`), which
+ * grounds them with the SAME Work IQ client as the key notes — real Copilot
+ * Retrieval / Graph Search when `WORKIQ_MODE=graph`, or the mock otherwise. If
+ * the bridge isn't available (e.g. old preload), fall back to the local mock.
  */
 export interface ChatBackend {
   ask(question: string, note: KeyNote): Promise<ChatAnswer>;
 }
 
-/** Default backend: the fast renderer-side mock. Swap this to go live. */
 export const chatBackend: ChatBackend = {
-  ask: (question, note) => mockFollowUp(question, note),
+  ask: async (question, note) => {
+    try {
+      const result = await bridge.askChat(question, note.topic);
+      // If the backend returned nothing useful, fall back to the mock.
+      if (result && result.answer) return { answer: result.answer, sources: result.sources ?? [] };
+    } catch {
+      // bridge.askChat unavailable — fall through to the mock.
+    }
+    return mockFollowUp(question, note);
+  },
 };

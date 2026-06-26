@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { motion } from 'framer-motion';
 import { SOURCE_ICON } from '@/shared/theme';
+import { bridge } from '@/shared/bridge';
 import { useConversation } from './useConversation';
 import type { ChatMessage, KeyNote } from './types';
 
@@ -12,7 +14,7 @@ import type { ChatMessage, KeyNote } from './types';
  * with the Work IQ answer + the files it found, where the rep can ask follow-ups.
  */
 export function Conversation() {
-  const { notes, selected, selectedId, selectNote, ask } = useConversation();
+  const { notes, selected, selectedId, selectNote, ask, removeNote, flash } = useConversation();
   const [draft, setDraft] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,13 @@ export function Conversation() {
         {notes.length === 0 ? (
           <span className="text-xs italic text-slate-500">Key notes from the call appear here…</span>
         ) : (
-          <PillRail notes={notes} selectedId={selectedId} onSelect={selectNote} />
+          <PillRail
+            notes={notes}
+            selectedId={selectedId}
+            flash={flash}
+            onSelect={selectNote}
+            onRemove={removeNote}
+          />
         )}
       </div>
 
@@ -72,6 +80,22 @@ export function Conversation() {
   );
 }
 
+/** Smoothly bring a pill (by id) fully into view inside its rail. */
+function scrollPillIntoView(rail: HTMLDivElement | null, pillId: string) {
+  if (!rail) return;
+  const el = Array.from(rail.children).find(
+    (child) => (child as HTMLElement).dataset.pillId === pillId,
+  ) as HTMLElement | undefined;
+  if (!el) return;
+  const left = el.offsetLeft;
+  const right = left + el.offsetWidth;
+  if (left < rail.scrollLeft) {
+    rail.scrollTo({ left: Math.max(0, left - 8), behavior: 'smooth' });
+  } else if (right > rail.scrollLeft + rail.clientWidth) {
+    rail.scrollTo({ left: right - rail.clientWidth + 8, behavior: 'smooth' });
+  }
+}
+
 /**
  * A horizontally-scrollable rail of key-note pills, with edge fades + chevron
  * buttons that appear only when there's more to scroll to.
@@ -79,14 +103,19 @@ export function Conversation() {
 function PillRail({
   notes,
   selectedId,
+  flash,
   onSelect,
+  onRemove,
 }: {
   notes: KeyNote[];
   selectedId: string | null;
+  flash: { id: string; nonce: number } | null;
   onSelect: (id: string) => void;
+  onRemove: (id: string) => void;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ left: false, right: false });
+  const [flashedId, setFlashedId] = useState<string | null>(null);
 
   const update = useCallback(() => {
     const el = railRef.current;
@@ -104,6 +133,26 @@ function PillRail({
     observer.observe(el);
     return () => observer.disconnect();
   }, [update, notes.length]);
+
+  // Scroll the SELECTED pill into view — so when a brand-new note opens, the
+  // rep is taken right to it.
+  useEffect(() => {
+    if (selectedId == null) return;
+    scrollPillIntoView(railRef.current, selectedId);
+  }, [selectedId, notes.length]);
+
+  // "Show where it is": a repeated question scrolls its existing pill into view
+  // and pulses it briefly — without selecting or opening its chat.
+  useEffect(() => {
+    if (!flash) return;
+    scrollPillIntoView(railRef.current, flash.id);
+    setFlashedId(flash.id);
+    const timer = setTimeout(
+      () => setFlashedId((cur) => (cur === flash.id ? null : cur)),
+      1400,
+    );
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   const nudge = (dx: number) => railRef.current?.scrollBy({ left: dx, behavior: 'smooth' });
 
@@ -130,7 +179,9 @@ function PillRail({
             key={note.id}
             note={note}
             active={note.id === selectedId}
+            flashing={note.id === flashedId}
             onSelect={() => onSelect(note.id)}
+            onRemove={() => onRemove(note.id)}
           />
         ))}
       </div>
@@ -168,25 +219,38 @@ function Chevron({ dir }: { dir: 'left' | 'right' }) {
   );
 }
 
-/** A single key-note pill. */
+/** A single key-note pill. Animates in so a newly-detected note draws the eye. */
 function Pill({
   note,
   active,
+  flashing,
   onSelect,
+  onRemove,
 }: {
   note: KeyNote;
   active: boolean;
+  flashing: boolean;
   onSelect: () => void;
+  onRemove: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <motion.div
+      data-pill-id={note.id}
+      initial={{ opacity: 0, scale: 0.7, y: -4 }}
+      animate={
+        flashing
+          ? { opacity: 1, scale: [1, 1.08, 1], y: 0 }
+          : { opacity: 1, scale: 1, y: 0 }
+      }
+      transition={{ type: 'spring', stiffness: 420, damping: 26 }}
       onClick={onSelect}
       title={note.query}
-      className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition ${
+      className={`flex flex-shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition ${
         active
           ? 'border-sky-400/60 bg-sky-500/20 text-slate-100'
-          : 'border-white/10 text-slate-300 hover:bg-white/10'
+          : flashing
+            ? 'border-amber-400/70 bg-amber-400/10 text-slate-100 ring-2 ring-amber-400/50'
+            : 'border-white/10 text-slate-300 hover:bg-white/10'
       }`}
     >
       {note.status === 'searching' ? (
@@ -195,7 +259,31 @@ function Pill({
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
       )}
       {note.topic}
-    </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        title="Remove key note"
+        aria-label="Remove key note"
+        className="-mr-1 ml-0.5 flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full text-slate-400 opacity-60 transition hover:bg-white/20 hover:text-slate-100 hover:opacity-100"
+      >
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <line x1="5" y1="5" x2="19" y2="19" />
+          <line x1="19" y1="5" x2="5" y2="19" />
+        </svg>
+      </button>
+    </motion.div>
   );
 }
 
@@ -258,13 +346,15 @@ function Bubble({ msg }: { msg: ChatMessage }) {
             {msg.sources && msg.sources.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {msg.sources.map((source) => (
-                  <span
+                  <button
                     key={source.url}
-                    title={source.url}
-                    className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300"
+                    type="button"
+                    title={`Open: ${source.url}`}
+                    onClick={() => bridge.openExternal(source.url)}
+                    className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300 transition hover:border-sky-400/40 hover:bg-white/10 hover:text-sky-300"
                   >
                     {SOURCE_ICON[source.kind]} {source.title}
-                  </span>
+                  </button>
                 ))}
               </div>
             )}
